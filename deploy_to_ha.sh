@@ -6,7 +6,14 @@ set -e
 # 配置
 HA_HOST="${HA_HOST:-192.168.1.249}"
 HA_USER="${HA_USER:-root}"
-DEPLOY_PATH="${DEPLOY_PATH:-/opt/iptv}"
+# 如果 DEPLOY_PATH 以 ~ 开头，需要在远程服务器上展开
+if [ -z "$DEPLOY_PATH" ]; then
+    if [ "$HA_USER" = "root" ]; then
+        DEPLOY_PATH="/opt/iptv"
+    else
+        DEPLOY_PATH="/home/${HA_USER}/iptv"
+    fi
+fi
 
 echo "=========================================="
 echo "IPTV 服务部署到 Home Assistant"
