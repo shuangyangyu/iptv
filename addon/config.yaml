@@ -1,0 +1,39 @@
+name: IPTV Server
+version: "2.8.0"
+slug: iptv_server
+description: IPTV M3U/EPG 生成服务，支持组播转 HTTP 代理（UDPXY）
+url: https://github.com/shuangyangyu/iptv
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+init: false
+startup: services
+boot: auto
+ports:
+  "8088/tcp": 8088
+  "4022/tcp": 4022
+ports_description:
+  "8088/tcp": "FastAPI 后端 API 端口"
+  "4022/tcp": "UDPXY UDP 转 HTTP 代理端口"
+host_network: true
+privileged:
+  - NET_ADMIN
+  - NET_RAW
+map:
+  - config:rw
+  - share:rw
+options:
+  api_port: 8088
+  udpxy_port: 4022
+  source_iface: ""
+  local_iface: ""
+  log_level: info
+schema:
+  api_port: int?
+  udpxy_port: int?
+  source_iface: str?
+  local_iface: str?
+  log_level: "list(info|debug|warning|error)"
