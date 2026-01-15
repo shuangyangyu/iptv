@@ -9,26 +9,22 @@ FROM ${BUILD_FROM}
 WORKDIR /app
 
 # 安装系统依赖
-# 注意：HA addon 基础镜像可能是 Alpine 或 Debian，需要兼容两种包管理器
+# 注意：HA addon 基础镜像通常是 Alpine，使用 apk
 RUN \
-    if [ -f /etc/alpine-release ]; then \
-        # Alpine Linux
-        apk add --no-cache \
-            curl \
-            wget \
-            lsof \
-            net-tools \
-            iproute2 \
-            git \
-            make \
-            gcc \
-            musl-dev \
-            linux-headers \
-            python3-dev \
-            py3-pip \
-            || true; \
-    else \
-        # Debian/Ubuntu
+    apk add --no-cache --virtual .build-deps \
+        curl \
+        wget \
+        lsof \
+        net-tools \
+        iproute2 \
+        git \
+        make \
+        gcc \
+        musl-dev \
+        linux-headers \
+        python3-dev \
+        py3-pip \
+    || ( \
         apt-get update && \
         apt-get install -y --no-install-recommends \
             curl \
@@ -41,8 +37,8 @@ RUN \
             gcc \
             build-essential \
             python3-dev \
-            || true; \
-    fi
+            python3-pip \
+    )
 
 # 如果包管理器没有 udpxy，从源码编译
 RUN \
@@ -56,7 +52,20 @@ RUN \
     fi
 
 # 验证 udpxy 安装
-RUN which udpxy || (echo "ERROR: udpxy not found" && exit 1)
+RUN which udpxy || (echo "WARNING: udpxy not found, will try to compile from source" && false) || true
+
+# 如果 udpxy 仍未安装，再次尝试编译
+RUN \
+    if ! command -v udpxy > /dev/null 2>&1; then \
+        echo "Compiling udpxy from source..." && \
+        cd /tmp && \
+        git clone --depth 1 https://github.com/pcherenkov/udpxy.git && \
+        cd udpxy/chipmunk && \
+        make && \
+        make install && \
+        rm -rf /tmp/udpxy && \
+        which udpxy || (echo "ERROR: Failed to install udpxy" && exit 1); \
+    fi
 
 # 创建 iptv_sever 目录结构
 RUN mkdir -p /app/iptv_sever
