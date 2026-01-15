@@ -43,17 +43,17 @@ RUN which udpxy || echo "WARNING: udpxy not found, will try to install at runtim
 # 创建 iptv_sever 目录结构
 RUN mkdir -p /app/iptv_sever/api /app/iptv_sever/backend /app/iptv_sever/out
 
-# 复制 Python 依赖文件
-# 注意：HA addon 构建时，构建上下文是仓库根目录
-COPY iptv_sever/api/requirements.txt /app/iptv_sever/api/requirements.txt
+# 从 GitHub 克隆项目代码（因为构建上下文可能无法访问父目录）
+# 使用 --depth=1 只克隆最新代码，节省空间和时间
+RUN cd /tmp && \
+    git clone --depth=1 https://github.com/shuangyangyu/iptv.git iptv-repo && \
+    cp -r iptv-repo/iptv_sever/api /app/iptv_sever/ && \
+    cp -r iptv-repo/iptv_sever/backend /app/iptv_sever/ && \
+    rm -rf iptv-repo
 
 # 安装 Python 依赖
 RUN pip3 install --no-cache-dir -r /app/iptv_sever/api/requirements.txt || \
     pip install --no-cache-dir -r /app/iptv_sever/api/requirements.txt
-
-# 复制项目代码
-COPY iptv_sever/api /app/iptv_sever/api
-COPY iptv_sever/backend /app/iptv_sever/backend
 
 # 创建 __init__.py 文件
 RUN touch /app/iptv_sever/__init__.py
@@ -62,8 +62,8 @@ RUN touch /app/iptv_sever/__init__.py
 ENV PYTHONPATH=/app
 
 # 复制启动脚本
-# 构建上下文是仓库根目录，所以路径是 addon/run.sh
-COPY addon/run.sh /run.sh
+# 构建上下文是 addon 目录，所以直接复制 run.sh
+COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 
 # 暴露端口
