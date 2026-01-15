@@ -35,10 +35,10 @@ else:
     # 标准环境
     # 使用 resolve() 确保所有路径都是绝对路径
     API_DIR = Path(__file__).resolve().parent  # /app/iptv_sever/api
-    IPTV_SEVER_DIR = API_DIR.resolve().parent  # /app/iptv_sever (确保是绝对路径)
-    OUT_DIR = IPTV_SEVER_DIR / "out"  # /app/iptv_sever/out (已经是绝对路径)
-    STATE_PATH = API_DIR / "state.json"  # 状态文件位于 api 目录
-    LOG_FILE = API_DIR / "api.log"
+    IPTV_SEVER_DIR = API_DIR.parent.resolve()  # /app/iptv_sever (确保是绝对路径)
+    OUT_DIR = (IPTV_SEVER_DIR / "out").resolve()  # /app/iptv_sever/out (确保是绝对路径)
+    STATE_PATH = (API_DIR / "state.json").resolve()  # 状态文件位于 api 目录
+    LOG_FILE = (API_DIR / "api.log").resolve()
 
 # 配置日志
 # 支持从环境变量读取日志级别（HA addon 环境）
