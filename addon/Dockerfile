@@ -62,6 +62,7 @@ RUN which udpxy || (echo "ERROR: udpxy not found" && exit 1)
 RUN mkdir -p /app/iptv_sever
 
 # 复制 Python 依赖文件
+# 注意：HA addon 构建时，上下文是仓库根目录，所以路径是相对于根目录的
 COPY iptv_sever/api/requirements.txt /app/iptv_sever/api/requirements.txt
 
 # 安装 Python 依赖
@@ -87,6 +88,7 @@ ENV PYTHONPATH=/app
 RUN mkdir -p /app/iptv_sever/out /app/iptv_sever/api
 
 # 复制启动脚本
+# HA addon 构建时，上下文是仓库根目录，所以路径是 addon/run.sh
 COPY addon/run.sh /run.sh
 RUN chmod a+x /run.sh
 
