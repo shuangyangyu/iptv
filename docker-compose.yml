@@ -1,0 +1,61 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: iptv-backend
+    # 使用 host 网络模式（推荐用于双网卡场景）
+    network_mode: host
+    # 或者使用 bridge 网络 + cap_add（更安全但配置复杂）
+    # networks:
+    #   - iptv-network
+    # cap_add:
+    #   - NET_RAW
+    #   - NET_ADMIN
+    volumes:
+      # 数据持久化
+      - iptv_out_data:/app/iptv_sever/out
+      - iptv_state_data:/app/iptv_sever/api
+    environment:
+      - API_PORT=8088
+      - API_HOST=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: iptv-frontend
+    # 使用 host 网络模式（与 backend 一致，可以访问 localhost:8088）
+    network_mode: host
+    # 如果使用 bridge 网络，取消注释以下内容并修改 nginx.conf
+    # ports:
+    #   - "80:80"
+    # networks:
+    #   - iptv-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# 如果使用 bridge 网络，取消注释以下内容
+# networks:
+#   iptv-network:
+#     driver: bridge
+
+volumes:
+  iptv_out_data:
+    driver: local
+  iptv_state_data:
+    driver: local

@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志
+*.log
+api.log
+
+# 状态文件（可选，根据需求决定是否忽略）
+# web/state.json
+
+# 输出目录
+out/
+logos/
+
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# 前端构建
+frontend/dist/
+frontend/node_modules/
+

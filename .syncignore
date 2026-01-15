@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# 日志和临时文件
+*.log
+*.tmp
+*.cache
+*.pid
+*.lock
+
+# 测试和覆盖率
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+
+# 输出目录（根据需求决定是否排除）
+# out/
+
+# 文档构建
+docs/_build/
+site/
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 其他
+*.bak
+*.orig
+*.rej
