@@ -62,9 +62,9 @@ RUN which udpxy || (echo "ERROR: udpxy not found" && exit 1)
 RUN mkdir -p /app/iptv_sever
 
 # 复制 Python 依赖文件
-# 注意：HA addon 构建时，虽然构建上下文是 addon 目录，
-# 但可以通过 .. 访问父目录（仓库根目录）的文件
-COPY ../iptv_sever/api/requirements.txt /app/iptv_sever/api/requirements.txt
+# 注意：HA addon 构建时，构建上下文是仓库根目录
+# Dockerfile 在 addon 目录中，但 COPY 路径相对于仓库根目录
+COPY iptv_sever/api/requirements.txt /app/iptv_sever/api/requirements.txt
 
 # 安装 Python 依赖
 # 兼容 pip 和 pip3
@@ -76,8 +76,8 @@ RUN \
     fi
 
 # 复制项目代码
-COPY ../iptv_sever/api /app/iptv_sever/api
-COPY ../iptv_sever/backend /app/iptv_sever/backend
+COPY iptv_sever/api /app/iptv_sever/api
+COPY iptv_sever/backend /app/iptv_sever/backend
 
 # 创建 __init__.py 文件（如果不存在）
 RUN touch /app/iptv_sever/__init__.py 2>/dev/null || true
@@ -89,8 +89,8 @@ ENV PYTHONPATH=/app
 RUN mkdir -p /app/iptv_sever/out /app/iptv_sever/api
 
 # 复制启动脚本
-# 构建上下文是 addon 目录，所以直接复制 run.sh
-COPY run.sh /run.sh
+# 构建上下文是仓库根目录，所以路径是 addon/run.sh
+COPY addon/run.sh /run.sh
 RUN chmod a+x /run.sh
 
 # 暴露端口
