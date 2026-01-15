@@ -33,3 +33,6 @@ test_openai.py
 文档/
 # 特别排除 old_doc（包含大文件）
 文档/old_doc/
+
+# 测试文件（不推送）
+iptv_sever/tests/
