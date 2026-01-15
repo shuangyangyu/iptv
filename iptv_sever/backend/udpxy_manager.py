@@ -64,6 +64,46 @@ class UdpxyManager:
         if not self.udpxy_binary:
             return False, "UDPXY 程序未安装", None
         
+        # 检查网络接口是否存在
+        source_iface = self.config.get("source_iface", "eth1")
+        try:
+            result = subprocess.run(
+                ["ip", "link", "show", source_iface],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if result.returncode != 0:
+                # 接口不存在，尝试查找可用的网络接口
+                logger.warning(f"网络接口 {source_iface} 不存在")
+                try:
+                    result = subprocess.run(
+                        ["ip", "link", "show"],
+                        capture_output=True,
+                        text=True,
+                        timeout=2,
+                    )
+                    if result.returncode == 0:
+                        # 查找可用的网络接口（排除 lo 和 docker 接口）
+                        available_ifaces = []
+                        for line in result.stdout.split('\n'):
+                            if ': ' in line and 'lo:' not in line and 'br-' not in line and 'veth' not in line:
+                                parts = line.split(':')
+                                if len(parts) >= 2:
+                                    iface_name = parts[1].strip().split()[0]
+                                    if iface_name and iface_name not in ['lo']:
+                                        available_ifaces.append(iface_name)
+                        if available_ifaces:
+                            return False, f"网络接口 {source_iface} 不存在。可用接口: {', '.join(available_ifaces)}。请在配置中设置正确的 source_iface", None
+                        else:
+                            return False, f"网络接口 {source_iface} 不存在，且无法找到可用的网络接口", None
+                except Exception as e:
+                    logger.error(f"检查网络接口失败: {e}")
+                    return False, f"网络接口 {source_iface} 不存在，且无法检查可用接口: {str(e)}", None
+        except Exception as e:
+            logger.warning(f"检查网络接口时出错: {e}")
+            # 继续执行，让 udpxy 自己处理接口错误
+        
         # 检查是否有其他 UDPXY 进程在运行（通过端口检查）
         if self.is_running():
             return False, "UDPXY 已在运行", None
