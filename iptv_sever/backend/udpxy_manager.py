@@ -135,6 +135,8 @@ class UdpxyManager:
             cmd_str = " ".join(shlex.quote(str(arg)) for arg in cmd)
             full_cmd = f"nohup {cmd_str} > /dev/null 2>&1 &"
             
+            logger.info(f"执行 UDPXY 启动命令: {full_cmd}")
+            
             # 使用 shell 执行命令
             process = subprocess.Popen(
                 full_cmd,
@@ -145,20 +147,38 @@ class UdpxyManager:
             )
             process.wait()  # 等待 shell 命令完成
             
+            # 检查命令执行结果
+            if process.returncode != 0:
+                stderr_output = process.stderr.read().decode('utf-8', errors='ignore') if process.stderr else ""
+                logger.error(f"UDPXY 启动命令执行失败，返回码: {process.returncode}, 错误: {stderr_output}")
+                return False, f"UDPXY 启动命令执行失败: {stderr_output or '未知错误'}", None
+            
             # 等待进程启动（nohup 需要一些时间）
             time.sleep(1.0)  # 增加等待时间，确保进程完全启动
             
             # 尝试从端口监听状态找到 udpxy 进程
             max_retries = 15  # 增加重试次数
             pid = None
+            port_listening = False
             for retry in range(max_retries):
                 # 检查端口是否被监听（更可靠的方法）
                 try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(0.5)
-                    result = sock.connect_ex((self.config["bind_address"], self.config["port"]))
-                    sock.close()
-                    if result == 0:
+                    # 尝试连接多个地址
+                    for addr in ["127.0.0.1", "0.0.0.0", "localhost"]:
+                        try:
+                            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                            sock.settimeout(0.5)
+                            result = sock.connect_ex((addr, self.config["port"]))
+                            sock.close()
+                            if result == 0:
+                                port_listening = True
+                                logger.debug(f"端口 {self.config['port']} 在 {addr} 上被监听")
+                                break
+                        except Exception as e:
+                            logger.debug(f"连接 {addr}:{self.config['port']} 失败: {e}")
+                            continue
+                    
+                    if port_listening:
                         # 端口被监听，说明 udpxy 正在运行
                         # 尝试从 lsof 获取 PID（如果可用）
                         try:
@@ -169,41 +189,41 @@ class UdpxyManager:
                                 timeout=2,
                             )
                             if result.returncode == 0 and result.stdout.strip():
-                                pid = int(result.stdout.strip())
+                                pid = int(result.stdout.strip().split('\n')[0])
+                                logger.debug(f"从 lsof 获取到 PID: {pid}")
                                 break
-                        except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
+                        except (FileNotFoundError, subprocess.TimeoutExpired, ValueError) as e:
+                            logger.debug(f"lsof 获取 PID 失败: {e}")
                             # lsof 不可用或获取失败，尝试其他方法
-                            # 使用 netstat 或 ss（如果可用）
+                            # 使用 pgrep 查找 udpxy 进程
                             try:
                                 result = subprocess.run(
-                                    ["ss", "-tlnp"],
+                                    ["pgrep", "-f", "udpxy"],
                                     capture_output=True,
                                     text=True,
                                     timeout=2,
                                 )
-                                if result.returncode == 0:
-                                    for line in result.stdout.split('\n'):
-                                        if f":{self.config['port']}" in line and "udpxy" in line.lower():
-                                            # 尝试从行中提取 PID
-                                            import re
-                                            match = re.search(r'pid=(\d+)', line)
-                                            if match:
-                                                pid = int(match.group(1))
-                                                break
-                            except Exception:
+                                if result.returncode == 0 and result.stdout.strip():
+                                    # 可能有多个进程，选择第一个
+                                    pid = int(result.stdout.strip().split('\n')[0])
+                                    logger.debug(f"从 pgrep 获取到 PID: {pid}")
+                                    break
+                            except Exception as e2:
+                                logger.debug(f"pgrep 获取 PID 失败: {e2}")
                                 pass
-                            # 如果还是找不到，使用端口检查确认进程存在即可
-                            # PID 可以从后续的进程检查中获取
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"端口检查异常: {e}")
                     pass
                 
                 # 如果还没找到，等待后重试
                 if pid is None:
                     time.sleep(0.4)  # 增加等待时间
+                    logger.debug(f"等待 UDPXY 启动... ({retry + 1}/{max_retries})")
             
             if pid is None:
                 # 如果无法获取 PID，但端口被监听，说明进程在运行
                 # 等待更长时间，然后再次尝试获取 PID
+                logger.debug("首次检查未获取到 PID，等待后重试...")
                 time.sleep(1.0)
                 try:
                     result = subprocess.run(
@@ -214,23 +234,54 @@ class UdpxyManager:
                     )
                     if result.returncode == 0 and result.stdout.strip():
                         pid = int(result.stdout.strip().split('\n')[0])
+                        logger.debug(f"重试后从 lsof 获取到 PID: {pid}")
                     else:
                         # 尝试通过进程名查找 PID
                         try:
                             result = subprocess.run(
-                                ["pgrep", "-f", f"udpxy.*-p.*{self.config['port']}"],
+                                ["pgrep", "-f", "udpxy"],
                                 capture_output=True,
                                 text=True,
                                 timeout=2,
                             )
                             if result.returncode == 0 and result.stdout.strip():
                                 pid = int(result.stdout.strip().split('\n')[0])
+                                logger.debug(f"重试后从 pgrep 获取到 PID: {pid}")
+                            else:
+                                # 如果端口被监听但无法获取 PID，仍然认为启动成功
+                                if port_listening:
+                                    logger.warning("端口被监听但无法获取 PID，使用端口检查结果")
+                                    # 尝试最后一次获取 PID
+                                    try:
+                                        result = subprocess.run(
+                                            ["lsof", "-ti", f":{self.config['port']}"],
+                                            capture_output=True,
+                                            text=True,
+                                            timeout=2,
+                                        )
+                                        if result.returncode == 0 and result.stdout.strip():
+                                            pid = int(result.stdout.strip().split('\n')[0])
+                                        else:
+                                            # 无法获取 PID，但端口被监听，返回成功但 PID 为 None
+                                            logger.warning("无法获取 PID，但端口被监听，认为启动成功")
+                                            return True, "UDPXY 启动成功（端口已监听，但无法获取 PID）", None
+                                    except Exception:
+                                        return True, "UDPXY 启动成功（端口已监听，但无法获取 PID）", None
+                                else:
+                                    logger.error("UDPXY 启动失败：端口未监听且无法获取 PID")
+                                    return False, "UDPXY 启动失败：无法确认进程是否运行（端口未监听）", None
+                        except (FileNotFoundError, ValueError, subprocess.TimeoutExpired) as e:
+                            logger.error(f"获取 PID 失败: {e}")
+                            if port_listening:
+                                return True, "UDPXY 启动成功（端口已监听，但无法获取 PID）", None
                             else:
                                 return False, "UDPXY 启动失败：无法确认进程是否运行", None
-                        except (FileNotFoundError, ValueError, subprocess.TimeoutExpired):
-                            return False, "UDPXY 启动失败：无法确认进程是否运行", None
-                except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
-                    return False, "UDPXY 启动失败：无法确认进程是否运行", None
+                except (FileNotFoundError, subprocess.TimeoutExpired, ValueError) as e:
+                    logger.error(f"获取 PID 异常: {e}")
+                    if port_listening:
+                        return True, "UDPXY 启动成功（端口已监听，但无法获取 PID）", None
+                    else:
+                        return False, "UDPXY 启动失败：无法确认进程是否运行", None
             
             # 保存 PID
             self.pid_file.write_text(str(pid))
