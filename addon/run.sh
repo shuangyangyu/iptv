@@ -148,6 +148,22 @@ cleanup() {
 
 trap cleanup SIGTERM SIGINT
 
+# 启动 cron 服务（用于定时任务）
+log "启动 cron 服务..."
+# Alpine 使用 crond，Debian 使用 cron
+if command -v crond > /dev/null; then
+    crond -f -l 2 &
+    log "✅ Cron 服务已启动 (crond)"
+elif command -v cron > /dev/null; then
+    cron
+    log "✅ Cron 服务已启动 (cron)"
+else
+    log "⚠️  Cron 服务未找到，定时任务可能无法运行"
+fi
+
+# 等待 cron 启动
+sleep 1
+
 # 启动 FastAPI 服务
 log "启动 FastAPI 后端服务..."
 cd /app

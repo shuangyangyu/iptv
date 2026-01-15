@@ -23,6 +23,7 @@ RUN apk add --no-cache \
     linux-headers \
     python3-dev \
     py3-pip \
+    dcron \
     || true
 
 # 如果包管理器没有 udpxy，从源码编译

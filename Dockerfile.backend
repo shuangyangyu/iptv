@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y \
     lsof \
     net-tools \
     iproute2 \
+    # 定时任务服务
+    cron \
     # 编译工具（用于 udpxy 源码编译）
     git \
     make \
@@ -35,6 +37,10 @@ RUN apt-get update && apt-get install -y \
     # 清理 apt 缓存
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# 创建 cron 日志目录
+RUN mkdir -p /var/log/cron && \
+    touch /var/log/cron/cron.log
 
 # 验证 udpxy 安装
 RUN which udpxy || (echo "ERROR: udpxy not found" && exit 1)
@@ -61,8 +67,12 @@ ENV PYTHONPATH=/app
 # 创建必要的目录
 RUN mkdir -p /app/iptv_sever/out /app/iptv_sever/api
 
+# 复制启动脚本
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # 暴露端口
 EXPOSE 8088 4022
 
-# 启动命令
-CMD ["python", "-m", "uvicorn", "iptv_sever.api.main:app", "--host", "0.0.0.0", "--port", "8088"]
+# 启动命令（使用启动脚本，同时启动 cron 和 FastAPI）
+ENTRYPOINT ["/docker-entrypoint.sh"]
