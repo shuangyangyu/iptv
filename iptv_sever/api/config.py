@@ -22,15 +22,15 @@ if __package__ in (None, ""):
 
 # 路径配置
 # 支持 Home Assistant addon 环境（使用 /data 目录）
-# 如果 DATA_DIR 环境变量存在，使用 HA addon 的数据目录
+# 如果 DATA_DIR 环境变量存在且是绝对路径，使用 HA addon 的数据目录
 DATA_DIR = Path(os.environ.get("DATA_DIR", ""))
-if DATA_DIR and DATA_DIR.exists():
+if DATA_DIR and DATA_DIR.is_absolute() and DATA_DIR.exists():
     # HA addon 环境
     API_DIR = Path(__file__).resolve().parent  # /app/iptv_sever/api
-    IPTV_SEVER_DIR = API_DIR.parent  # /app/iptv_sever
-    OUT_DIR = Path(os.environ.get("OUT_DIR", str(DATA_DIR / "out")))  # /data/out
-    STATE_PATH = Path(os.environ.get("STATE_FILE", str(DATA_DIR / "state.json")))  # /data/state.json
-    LOG_FILE = Path(os.environ.get("LOG_FILE", str(DATA_DIR / "api.log")))  # /data/api.log
+    IPTV_SEVER_DIR = API_DIR.parent.resolve()  # /app/iptv_sever (确保是绝对路径)
+    OUT_DIR = Path(os.environ.get("OUT_DIR", str(DATA_DIR / "out"))).resolve()  # /data/out (确保是绝对路径)
+    STATE_PATH = Path(os.environ.get("STATE_FILE", str(DATA_DIR / "state.json"))).resolve()  # /data/state.json
+    LOG_FILE = Path(os.environ.get("LOG_FILE", str(DATA_DIR / "api.log"))).resolve()  # /data/api.log
 else:
     # 标准环境
     # 使用 resolve() 确保所有路径都是绝对路径
