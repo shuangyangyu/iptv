@@ -30,7 +30,8 @@ def get_status() -> Dict[str, Any]:
     # 实时检查 M3U 文件状态
     m3u_path_str = cfg.get("output_m3u", "iptv.m3u")
     m3u_filename = Path(m3u_path_str).name
-    m3u_path = OUT_DIR / m3u_filename
+    # 确保使用绝对路径
+    m3u_path = OUT_DIR.resolve() / m3u_filename
     if m3u_path.exists():
         st["m3u"] = {
             "exists": True,
@@ -44,7 +45,8 @@ def get_status() -> Dict[str, Any]:
     # 实时检查 EPG 文件状态
     epg_path_str = cfg.get("epg_out", "epg.xml")
     epg_filename = Path(epg_path_str).name
-    epg_path = OUT_DIR / epg_filename
+    # 确保使用绝对路径
+    epg_path = OUT_DIR.resolve() / epg_filename
     if epg_path.exists():
         st["epg"] = {
             "exists": True,
