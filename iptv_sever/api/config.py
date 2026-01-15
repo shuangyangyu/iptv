@@ -33,9 +33,10 @@ if DATA_DIR and DATA_DIR.exists():
     LOG_FILE = Path(os.environ.get("LOG_FILE", str(DATA_DIR / "api.log")))  # /data/api.log
 else:
     # 标准环境
-    API_DIR = Path(__file__).resolve().parent  # /www/iptv_sever/api
-    IPTV_SEVER_DIR = API_DIR.parent  # /www/iptv_sever
-    OUT_DIR = (IPTV_SEVER_DIR / "out").resolve()  # /www/iptv_sever/out (确保是绝对路径)
+    # 使用 resolve() 确保所有路径都是绝对路径
+    API_DIR = Path(__file__).resolve().parent  # /app/iptv_sever/api
+    IPTV_SEVER_DIR = API_DIR.resolve().parent  # /app/iptv_sever (确保是绝对路径)
+    OUT_DIR = IPTV_SEVER_DIR / "out"  # /app/iptv_sever/out (已经是绝对路径)
     STATE_PATH = API_DIR / "state.json"  # 状态文件位于 api 目录
     LOG_FILE = API_DIR / "api.log"
 
