@@ -36,3 +36,6 @@ test_openai.py
 
 # 测试文件（不推送）
 iptv_sever/tests/
+
+# 开发和部署脚本（不推送）
+scripts/
