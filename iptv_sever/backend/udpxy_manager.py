@@ -242,7 +242,19 @@ class UdpxyManager:
             except OSError:
                 return False, "UDPXY 进程启动后立即退出", None
             
-            return True, "UDPXY 启动成功", pid
+            # 再次验证端口是否被监听（确保服务完全启动）
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex((self.config["bind_address"], self.config["port"]))
+                sock.close()
+                if result != 0:
+                    return False, "UDPXY 启动后端口未监听", None
+            except Exception as e:
+                logger.warning(f"验证端口监听失败: {e}")
+            
+            logger.info(f"UDPXY 启动成功，PID: {pid}, 端口: {self.config['port']}")
+            return True, f"UDPXY 启动成功 (PID: {pid}, 端口: {self.config['port']})", pid
         except Exception as e:
             return False, f"启动失败: {str(e)}", None
     
