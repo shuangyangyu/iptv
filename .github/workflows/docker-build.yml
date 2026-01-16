@@ -67,3 +67,69 @@ jobs:
           labels: ${{ steps.meta-frontend.outputs.labels }}
           cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_FRONTEND }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_FRONTEND }}:buildcache,mode=max
+
+      - name: Update Docker Hub description for backend
+        run: |
+          # 登录 Docker Hub 获取 JWT token
+          TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${{ secrets.DOCKERHUB_USERNAME }}\",\"password\":\"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Error: Failed to get Docker Hub token"
+            exit 1
+          fi
+          
+          # 读取 README_DOCKERHUB.md 内容
+          DESCRIPTION=$(cat README_DOCKERHUB.md)
+          
+          # 转义 JSON 特殊字符
+          DESCRIPTION_JSON=$(echo "$DESCRIPTION" | jq -Rs .)
+          
+          # 构建更新请求 JSON
+          UPDATE_JSON=$(jq -n \
+            --arg desc "IPTV Server - M3U/EPG 生成服务，包含 FastAPI 后端和 Vue.js 前端，支持 UDPXY 代理和定时任务。" \
+            --argjson full "$DESCRIPTION_JSON" \
+            '{description: $desc, full_description: $full}')
+          
+          # 更新 Docker Hub 仓库描述
+          curl -s -X PATCH \
+            -H "Authorization: JWT ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$UPDATE_JSON" \
+            https://hub.docker.com/v2/repositories/${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_BACKEND }}/ \
+            | jq -r '.name // "Success"'
+
+      - name: Update Docker Hub description for frontend
+        run: |
+          # 登录 Docker Hub 获取 JWT token
+          TOKEN=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${{ secrets.DOCKERHUB_USERNAME }}\",\"password\":\"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Error: Failed to get Docker Hub token"
+            exit 1
+          fi
+          
+          # 读取 README_DOCKERHUB.md 内容
+          DESCRIPTION=$(cat README_DOCKERHUB.md)
+          
+          # 转义 JSON 特殊字符
+          DESCRIPTION_JSON=$(echo "$DESCRIPTION" | jq -Rs .)
+          
+          # 构建更新请求 JSON
+          UPDATE_JSON=$(jq -n \
+            --arg desc "IPTV Server Frontend - Vue.js 前端，Nginx Web 服务器。" \
+            --argjson full "$DESCRIPTION_JSON" \
+            '{description: $desc, full_description: $full}')
+          
+          # 更新 Docker Hub 仓库描述
+          curl -s -X PATCH \
+            -H "Authorization: JWT ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$UPDATE_JSON" \
+            https://hub.docker.com/v2/repositories/${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_FRONTEND }}/ \
+            | jq -r '.name // "Success"'
