@@ -4,6 +4,29 @@
 
 本项目已完全容器化，支持一键部署。
 
+## 🚀 快速开始（使用 Docker Hub 镜像）
+
+镜像已自动构建并推送到 Docker Hub，可以直接使用：
+
+```bash
+# 使用 Docker Hub 镜像（推荐）
+# 详细说明请查看 README_DOCKERHUB.md
+docker-compose pull
+docker-compose up -d
+```
+
+**Docker Hub 镜像**:
+- `shuangyangyu/iptv-backend:latest`
+- `shuangyangyu/iptv-frontend:latest`
+
+📖 详细使用说明请参考：[README_DOCKERHUB.md](README_DOCKERHUB.md)
+
+---
+
+## 🔨 从源码构建
+
+如果想要从源码构建镜像，继续阅读本文档。
+
 ## 前置要求
 
 1. **Docker** (版本 20.10+)
