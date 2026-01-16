@@ -31,9 +31,10 @@ yarn-error.log*
 .gitattributes
 
 # Docker
-Dockerfile*
-docker-compose*.yml
-.dockerignore
+# 保留 Dockerfile，因为它们需要被复制到构建上下文
+# Dockerfile*
+# docker-compose*.yml
+# .dockerignore
 
 # 测试
 tests/
@@ -42,10 +43,11 @@ tests/
 .coverage
 htmlcov/
 
-# 文档
+# 文档（保留必要的配置文件）
 文档/
 *.md
 !README.md
+!iptv_sever/README.md
 
 # 日志
 *.log
@@ -66,3 +68,11 @@ archive/
 scripts/
 test_*.sh
 test_*.py
+
+# GitHub Actions
+.github/
+
+# 部署脚本（不需要在镜像中）
+deploy_to_ha.sh
+服务器重新部署.sh
+配置SSH密钥.sh
