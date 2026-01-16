@@ -1,6 +1,8 @@
 services:
   backend:
-    image: shuangyangyu/iptv-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     container_name: iptv-backend
     # 使用 host 网络模式（推荐用于双网卡场景）
     network_mode: host
@@ -26,7 +28,9 @@ services:
       start_period: 40s
 
   frontend:
-    image: shuangyangyu/iptv-frontend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
     container_name: iptv-frontend
     # 使用 host 网络模式（与 backend 一致，可以访问 localhost:8088）
     network_mode: host
