@@ -28,8 +28,10 @@ services:
   frontend:
     image: shuangyangyu/iptv-frontend:latest
     container_name: iptv-frontend
-    # 使用 host 网络模式；镜像内 nginx 已写死 listen 8088、反代后端 8089，无需挂载 nginx.conf
+    # 使用 host 网络模式；挂载 nginx.conf 使 listen 8088、反代 8089（服务器若无法拉新镜像则依赖此挂载）
     network_mode: host
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
     # 如果使用 bridge 网络，取消注释以下内容
     # ports:
     #   - "8088:8088"
