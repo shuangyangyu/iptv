@@ -1,10 +1,10 @@
 # Docker 快速部署指南
 
-## ✅ 现在可以在任何环境中使用 docker-compose 安装！
+## 现在可以使用 Docker Compose 安装
 
 本项目已完全容器化，支持一键部署。
 
-## 🚀 快速开始（使用 Docker Hub 镜像）
+## 快速开始（使用 Docker Hub 镜像）
 
 镜像已自动构建并推送到 Docker Hub，可以直接使用：
 
@@ -15,7 +15,7 @@ docker-compose pull
 docker-compose up -d
 ```
 
-**Docker Hub 镜像**:
+**Docker Hub 镜像**：
 - `shuangyangyu/iptv-backend:latest`
 - `shuangyangyu/iptv-frontend:latest`
 
@@ -23,7 +23,7 @@ docker-compose up -d
 
 ---
 
-## 🔨 从源码构建
+## 从源码构建
 
 如果想要从源码构建镜像，继续阅读本文档。
 
@@ -72,9 +72,13 @@ docker-compose ps
 
 ### 3. 访问服务
 
-- **前端界面**: http://localhost
-- **后端 API**: http://localhost:8088
+当前 `docker-compose.yml` 使用前端 nginx 统一对外：
+
+- **Web 控制台**: http://localhost:8088
 - **API 文档**: http://localhost:8088/docs
+- **健康检查**: http://localhost:8088/health
+- **M3U 文件**: http://localhost:8088/out/iptv.m3u
+- **EPG 文件**: http://localhost:8088/out/epg.xml
 
 ## 配置说明
 
@@ -92,9 +96,11 @@ docker-compose ps
 
 ### 端口说明
 
-- **80**: 前端 Web 界面
-- **8088**: 后端 API
-- **4022**: UDPXY 服务（UDP 转 HTTP 代理）
+- **8088**: 前端 Web 控制台、API 反向代理、`/out` 静态文件、回放代理。
+- **8089**: FastAPI 后端服务端口，由 nginx 反代访问。
+- **4022**: UDPXY 服务（UDP 转 HTTP 代理）。
+
+`docker-compose.yml` 默认使用 host 网络模式，前端 nginx 监听 `8088`，后端通过 `API_PORT=8089` 运行。用户通常只需要访问 `8088`。
 
 ## 常用命令
 
@@ -122,8 +128,8 @@ docker-compose up -d
 
 ```bash
 # 检查端口占用
-lsof -i :80
 lsof -i :8088
+lsof -i :8089
 lsof -i :4022
 
 # 如果被占用，停止占用端口的服务或修改 docker-compose.yml
@@ -188,12 +194,9 @@ docker-compose logs backend | grep udpxy
 
 macOS 和 Windows 不支持 host 网络模式，需要修改配置：
 
-1. 复制 bridge 网络配置：
-```bash
-cp docker-compose.bridge.yml.example docker-compose.override.yml
-```
+1. 准备 bridge 网络配置，映射前端 `8088`、后端 `8089` 和 UDPXY `4022`。
 
-2. 修改 `nginx.conf`，将 `localhost:8088` 改为 `backend:8088`
+2. 修改 `nginx.conf`，将后端代理地址从 `localhost:8089` 改为 `backend:8089`。
 
 3. 启动服务：
 ```bash
@@ -202,11 +205,12 @@ docker-compose up -d
 
 ## 生产环境建议
 
-1. **使用非 root 用户运行容器**（在 Dockerfile 中添加）
-2. **配置 HTTPS**（使用 nginx 反向代理 + SSL 证书）
-3. **限制资源使用**（在 docker-compose.yml 中添加 limits）
-4. **配置日志轮转**
-5. **定期备份 volumes**
+1. 使用非 root 用户运行容器（在 Dockerfile 中添加）。
+2. 配置 HTTPS（使用 nginx 反向代理 + SSL 证书）。
+3. 限制资源使用（在 `docker-compose.yml` 中添加 limits）。
+4. 配置日志轮转。
+5. 定期备份 volumes。
+6. 如果服务暴露到局域网之外，建议增加认证或访问控制。
 
 ## 更多信息
 

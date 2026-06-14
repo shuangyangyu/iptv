@@ -43,11 +43,11 @@ tests/
 .coverage
 htmlcov/
 
-# 文档（保留必要的配置文件）
+# 文档
 文档/
+docs/
 *.md
 !README.md
-!iptv_sever/README.md
 
 # 日志
 *.log

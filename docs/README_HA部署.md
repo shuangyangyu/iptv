@@ -56,9 +56,13 @@ docker-compose ps
 
 #### 步骤 3：访问服务
 
-- **前端界面**: http://192.168.1.249
-- **后端 API**: http://192.168.1.249:8088
+当前 Docker Compose 部署由前端 nginx 统一对外监听 `8088`：
+
+- **Web 控制台**: http://192.168.1.249:8088
 - **API 文档**: http://192.168.1.249:8088/docs
+- **健康检查**: http://192.168.1.249:8088/health
+- **M3U 文件**: http://192.168.1.249:8088/out/iptv.m3u
+- **EPG 文件**: http://192.168.1.249:8088/out/epg.xml
 
 ## 常用命令
 
@@ -110,7 +114,7 @@ docker-compose up -d
 
 服务启动后，通过 Web 界面配置：
 
-1. 访问：http://192.168.1.249
+1. 访问：http://192.168.1.249:8088
 2. 进入配置页面
 3. 设置：
    - `source_iface`: 源网络接口（用于接收 IPTV 组播流）
@@ -118,9 +122,9 @@ docker-compose up -d
 
 ### 端口说明
 
-- **80**: 前端 Web 界面
-- **8088**: 后端 API
-- **4022**: UDPXY 服务（UDP 转 HTTP 代理）
+- **8088**: Web 控制台、API 反向代理、`/out` 静态文件、回放代理。
+- **8089**: FastAPI 后端服务端口，由 nginx 反代访问。
+- **4022**: UDPXY 服务（UDP 转 HTTP 代理）。
 
 ## 与 Addon 的区别
 
@@ -128,9 +132,9 @@ docker-compose up -d
 
 | 特性 | docker-compose | Addon |
 |------|----------------|-------|
-| 功能 | ✅ 完全相同 | ✅ 完全相同 |
-| 网络模式 | ✅ host 模式 | ✅ host 模式 |
-| 数据持久化 | ✅ Docker volumes | ✅ /data 目录 |
+| 功能 | 完全相同 | 完全相同 |
+| 网络模式 | host 模式 | host 模式 |
+| 数据持久化 | Docker volumes | /data 目录 |
 | 管理方式 | docker-compose 命令 | Supervisor UI |
 | 更新方式 | git pull + rebuild | Supervisor 更新 |
 
@@ -140,8 +144,8 @@ docker-compose up -d
 
 ```bash
 # 检查端口占用
-lsof -i :80
 lsof -i :8088
+lsof -i :8089
 lsof -i :4022
 
 # 如果被占用，停止占用端口的服务
@@ -169,11 +173,11 @@ docker ps -a
 
 使用 docker-compose 部署的优势：
 
-1. ✅ **不需要解决 Git clone 问题**
-2. ✅ **更简单直接**
-3. ✅ **更容易调试和维护**
-4. ✅ **功能完全相同**
-5. ✅ **可以随时更新代码**
+1. 不需要解决 Supervisor Git clone 问题。
+2. 部署链路更直接。
+3. 更容易用 Docker 日志调试和维护。
+4. 功能与 Addon 部署保持一致。
+5. 可以随时通过代码同步和重新构建更新服务。
 
 ## 需要帮助？
 

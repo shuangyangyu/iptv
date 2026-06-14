@@ -81,8 +81,8 @@ jobs:
             exit 1
           fi
           
-          # 读取 README_DOCKERHUB.md 内容
-          DESCRIPTION=$(cat README_DOCKERHUB.md)
+          # 读取 Docker Hub 文档内容
+          DESCRIPTION=$(cat docs/README_DOCKERHUB.md)
           
           # 转义 JSON 特殊字符
           DESCRIPTION_JSON=$(echo "$DESCRIPTION" | jq -Rs .)
@@ -114,8 +114,8 @@ jobs:
             exit 1
           fi
           
-          # 读取 README_DOCKERHUB.md 内容
-          DESCRIPTION=$(cat README_DOCKERHUB.md)
+          # 读取 Docker Hub 文档内容
+          DESCRIPTION=$(cat docs/README_DOCKERHUB.md)
           
           # 转义 JSON 特殊字符
           DESCRIPTION_JSON=$(echo "$DESCRIPTION" | jq -Rs .)

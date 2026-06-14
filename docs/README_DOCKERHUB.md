@@ -23,11 +23,11 @@ services:
       - iptv_out_data:/app/iptv_sever/out
       - iptv_state_data:/app/iptv_sever/api
     environment:
-      - API_PORT=8088
+      - API_PORT=8089
       - API_HOST=0.0.0.0
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8089/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -37,11 +37,13 @@ services:
     image: shuangyangyu/iptv-frontend:latest
     container_name: iptv-frontend
     network_mode: host
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8088/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -69,9 +71,10 @@ docker-compose logs -f
 
 #### 3. 访问服务
 
-- **前端界面**: http://localhost
-- **后端 API**: http://localhost:8088
+- **Web 控制台**: http://localhost:8088
 - **API 文档**: http://localhost:8088/docs
+- **M3U 文件**: http://localhost:8088/out/iptv.m3u
+- **EPG 文件**: http://localhost:8088/out/epg.xml
 
 ### 方法二：手动拉取镜像
 
@@ -86,7 +89,7 @@ docker run -d \
   --network host \
   -v iptv_out_data:/app/iptv_sever/out \
   -v iptv_state_data:/app/iptv_sever/api \
-  -e API_PORT=8088 \
+  -e API_PORT=8089 \
   -e API_HOST=0.0.0.0 \
   --restart unless-stopped \
   shuangyangyu/iptv-backend:latest
@@ -131,11 +134,11 @@ docker-compose up -d
 - 完整的 Python 依赖
 
 **端口**:
-- `8088`: FastAPI API 端口
+- `8089`: FastAPI API 端口（Docker Compose 中由前端 nginx 反代）
 - `4022`: UDPXY 服务端口
 
 **环境变量**:
-- `API_PORT`: API 端口（默认: 8088）
+- `API_PORT`: API 端口（镜像默认 8088，当前 compose 建议设置为 8089）
 - `API_HOST`: 绑定地址（默认: 0.0.0.0）
 
 ### iptv-frontend:latest
@@ -148,7 +151,7 @@ docker-compose up -d
 - 反向代理配置
 
 **端口**:
-- `80`: HTTP Web 服务
+- `8088`: HTTP Web 控制台和反向代理入口
 
 ## 配置说明
 
@@ -170,19 +173,19 @@ services:
   backend:
     image: shuangyangyu/iptv-backend:latest
     ports:
-      - "8088:8088"
+      - "8089:8089"
       - "4022:4022"
     # ... 其他配置
 
   frontend:
     image: shuangyangyu/iptv-frontend:latest
     ports:
-      - "80:80"
+      - "8088:8088"
     # ... 其他配置
 ```
 
-2. 修改 nginx 配置（在容器内）：
-   - 将 `localhost:8088` 改为 `backend:8088`
+2. 修改 nginx 配置：
+   - 将 `localhost:8089` 改为 `backend:8089`
 
 ### 数据持久化
 
@@ -253,8 +256,8 @@ docker-compose ps
 docker ps -a
 
 # 检查端口占用
-lsof -i :80
 lsof -i :8088
+lsof -i :8089
 lsof -i :4022
 ```
 
@@ -266,8 +269,8 @@ docker network ls
 docker network inspect bridge
 
 # 检查容器内部服务
-docker-compose exec backend curl http://localhost:8088/health
-docker-compose exec frontend wget -O- http://localhost/health
+docker-compose exec backend curl http://localhost:8089/health
+docker-compose exec frontend wget -O- http://localhost:8088/health
 ```
 
 ## 版本标签
@@ -303,11 +306,11 @@ docker-compose up -d
 - **GitHub 仓库**: https://github.com/shuangyangyu/iptv
 - **Docker Hub Backend**: https://hub.docker.com/r/shuangyangyu/iptv-backend
 - **Docker Hub Frontend**: https://hub.docker.com/r/shuangyangyu/iptv-frontend
-- **项目文档**: [README_DOCKER.md](README_DOCKER.md)
+- **项目文档**: [项目总览](README.md)
 
 ## 支持
 
 如遇问题，请：
 1. 查看 [故障排查](#故障排查) 部分
 2. 查看 GitHub Issues: https://github.com/shuangyangyu/iptv/issues
-3. 查看项目文档: [文档目录](文档/)
+3. 查看项目文档: [项目总览](README.md)

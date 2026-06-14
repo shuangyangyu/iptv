@@ -29,7 +29,7 @@ downloads/
 iptv_sever/api/state.json
 test_openai.py
 
-# 文档目录（不推送）
+# 旧文档目录（不推送；当前文档使用 docs/）
 文档/
 # 特别排除 old_doc（包含大文件）
 文档/old_doc/
