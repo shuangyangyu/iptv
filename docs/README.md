@@ -166,12 +166,6 @@ python3 iptv_sever/backend/build_epg.py \
 - 状态文件：`iptv_sever/api/state.json`
 - API 日志：`iptv_sever/api/api.log`
 
-Home Assistant Addon 环境下：
-
-- 输出目录：`/data/out`
-- 状态文件：`/data/state.json`
-- API 日志：`/data/api.log`
-
 主要配置字段：
 
 - `input_url`：频道列表接口。
@@ -218,4 +212,3 @@ http://192.168.1.250:4022/rtp/239.33.5.3:22590
 - Docker 部署：`README_DOCKER.md`
 - Docker Hub 镜像：`README_DOCKERHUB.md`
 - Home Assistant 部署：`README_HA部署.md`
-- Home Assistant Addon：`../addon/README.md`

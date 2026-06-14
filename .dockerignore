@@ -74,5 +74,3 @@ test_*.py
 
 # 部署脚本（不需要在镜像中）
 deploy_to_ha.sh
-服务器重新部署.sh
-配置SSH密钥.sh

@@ -1,8 +1,8 @@
 # Home Assistant 部署指南
 
-## 问题说明
+## 说明
 
-如果通过 Supervisor addon 安装遇到 SSL 错误（Git clone 失败），可以直接使用 docker-compose 部署，功能完全相同。
+本文档说明如何在 Home Assistant 设备或同网段服务器上使用 Docker Compose 部署 IPTV Server。
 
 ## 快速部署
 
@@ -126,18 +126,6 @@ docker-compose up -d
 - **8089**: FastAPI 后端服务端口，由 nginx 反代访问。
 - **4022**: UDPXY 服务（UDP 转 HTTP 代理）。
 
-## 与 Addon 的区别
-
-使用 docker-compose 部署与 addon 部署功能完全相同：
-
-| 特性 | docker-compose | Addon |
-|------|----------------|-------|
-| 功能 | 完全相同 | 完全相同 |
-| 网络模式 | host 模式 | host 模式 |
-| 数据持久化 | Docker volumes | /data 目录 |
-| 管理方式 | docker-compose 命令 | Supervisor UI |
-| 更新方式 | git pull + rebuild | Supervisor 更新 |
-
 ## 故障排查
 
 ### 1. 端口被占用
@@ -173,11 +161,10 @@ docker ps -a
 
 使用 docker-compose 部署的优势：
 
-1. 不需要解决 Supervisor Git clone 问题。
-2. 部署链路更直接。
-3. 更容易用 Docker 日志调试和维护。
-4. 功能与 Addon 部署保持一致。
-5. 可以随时通过代码同步和重新构建更新服务。
+1. 部署链路直接，便于排查。
+2. 可以用 Docker 日志调试和维护。
+3. 可以通过代码同步和重新构建更新服务。
+4. 数据通过 Docker volumes 持久化，便于备份和迁移。
 
 ## 需要帮助？
 
