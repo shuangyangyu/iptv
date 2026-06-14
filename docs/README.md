@@ -2,6 +2,14 @@
 
 IPTV Server 是一个用于生成 IPTV 播放列表和电子节目单的服务。它支持从运营商频道接口生成 `iptv.m3u`，从 EPG 接口生成 XMLTV 格式的 `epg.xml`，并内置 UDPXY 管理和回放代理能力。
 
+## 文档索引
+
+- `TECHNICAL.md`：技术架构、M3U/EPG 生成、UDPXY、回放代理和路由约束。
+- `README_DOCKER.md`：Docker Compose 快速部署和源码构建。
+- `README_DOCKERHUB.md`：Docker Hub 镜像使用、更新和排障。
+- `README_HA部署.md`：在 Home Assistant 设备或同网段服务器上使用 Docker Compose 部署。
+- `SETUP_DOCKERHUB.md`：GitHub Actions 推送 Docker Hub 镜像所需的 Secrets 配置。
+
 ## 当前架构
 
 ```text
@@ -212,4 +220,5 @@ http://192.168.1.250:4022/rtp/239.33.5.3:22590
 - 技术文档：`TECHNICAL.md`
 - Docker 部署：`README_DOCKER.md`
 - Docker Hub 镜像：`README_DOCKERHUB.md`
-- Home Assistant 部署：`README_HA部署.md`
+- Home Assistant / 服务器部署：`README_HA部署.md`
+- Docker Hub Secrets 配置：`SETUP_DOCKERHUB.md`

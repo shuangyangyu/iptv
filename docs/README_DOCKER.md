@@ -214,4 +214,6 @@ docker-compose up -d
 
 ## 更多信息
 
-详细文档请查看 [DOCKER.md](./DOCKER.md)
+- 项目总览：`README.md`
+- 技术文档：`TECHNICAL.md`
+- Docker Hub 镜像：`README_DOCKERHUB.md`

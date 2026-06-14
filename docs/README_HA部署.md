@@ -1,8 +1,8 @@
-# Home Assistant 部署指南
+# Home Assistant / 服务器部署指南
 
 ## 说明
 
-本文档说明如何在 Home Assistant 设备或同网段服务器上使用 Docker Compose 部署 IPTV Server。
+本文档说明如何在 Home Assistant 设备或同网段 Linux 服务器上使用 Docker Compose 部署 IPTV Server。示例中的 `<server-ip>` 表示目标设备 IP，默认部署目录为 `/opt/iptv`。
 
 ## 快速部署
 
@@ -24,7 +24,7 @@
 
 ```bash
 # 使用 scp
-scp -r /path/to/iptv root@192.168.1.249:/opt/iptv
+scp -r /path/to/iptv root@<server-ip>:/opt/iptv
 
 # 或使用 rsync（推荐，更高效）
 rsync -avz \
@@ -33,15 +33,14 @@ rsync -avz \
     --exclude='node_modules' \
     --exclude='文档' \
     --exclude='iptv_sever/tests' \
-    --exclude='scripts' \
-    ./ root@192.168.1.249:/opt/iptv
+    ./ root@<server-ip>:/opt/iptv
 ```
 
 #### 步骤 2：在 HA 设备上启动
 
 ```bash
-# SSH 到 HA 设备
-ssh root@192.168.1.249
+# SSH 到目标设备
+ssh root@<server-ip>
 
 # 进入项目目录
 cd /opt/iptv
@@ -58,19 +57,19 @@ docker-compose ps
 
 当前 Docker Compose 部署由前端 nginx 统一对外监听 `8088`：
 
-- **Web 控制台**: http://192.168.1.249:8088
-- **API 文档**: http://192.168.1.249:8088/docs
-- **健康检查**: http://192.168.1.249:8088/health
-- **M3U 文件**: http://192.168.1.249:8088/out/iptv.m3u
-- **EPG 文件**: http://192.168.1.249:8088/out/epg.xml
+- **Web 控制台**: `http://<server-ip>:8088`
+- **API 文档**: `http://<server-ip>:8088/docs`
+- **健康检查**: `http://<server-ip>:8088/health`
+- **M3U 文件**: `http://<server-ip>:8088/out/iptv.m3u`
+- **EPG 文件**: `http://<server-ip>:8088/out/epg.xml`
 
 ## 常用命令
 
 ### 查看日志
 
 ```bash
-# SSH 到 HA 设备
-ssh root@192.168.1.249
+# SSH 到目标设备
+ssh root@<server-ip>
 cd /opt/iptv
 
 # 查看所有服务日志
@@ -114,7 +113,7 @@ docker-compose up -d
 
 服务启动后，通过 Web 界面配置：
 
-1. 访问：http://192.168.1.249:8088
+1. 访问：`http://<server-ip>:8088`
 2. 进入配置页面
 3. 设置：
    - `source_iface`: 源网络接口（用于接收 IPTV 组播流）
