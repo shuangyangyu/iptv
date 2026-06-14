@@ -209,6 +209,7 @@ http://192.168.1.250:4022/rtp/239.33.5.3:22590
 
 ## 相关文档
 
+- 技术文档：`TECHNICAL.md`
 - Docker 部署：`README_DOCKER.md`
 - Docker Hub 镜像：`README_DOCKERHUB.md`
 - Home Assistant 部署：`README_HA部署.md`
