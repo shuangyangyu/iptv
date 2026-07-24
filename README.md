@@ -51,6 +51,16 @@ EPG：`http://<lan-ip>:8088/out/epg.xml`
 
 一键生成会跑 **M3U（含 Logo）+ EPG**。
 
+### Lovelace 卡片
+
+仓库内提供自定义卡片：[`hass/iptv-card/`](hass/iptv-card/README.md)。
+
+```yaml
+type: custom:iptv-control-card
+title: IPTV 241
+prefix: iptv_241
+```
+
 ## 架构
 
 详见 [`docs/TECHNICAL.md`](docs/TECHNICAL.md)。
