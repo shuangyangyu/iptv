@@ -353,19 +353,23 @@ http://192.168.1.250:4022/rtp/239.33.5.3:22590
 http://192.168.1.250:8088/catchup/{catchup_path}?programbegin=...&programend=...
 ```
 
-Nginx 负责把 `/catchup` 转发到后端 FastAPI：
+Nginx 负责把 `/catchup` 转发到后端 FastAPI（前缀必须对齐）：
 
 ```text
-/catchup/*  →  http://localhost:8089/catchup/*
+/catchup/*  →  http://localhost:8089/api/v1/catchup/*
 ```
 
-FastAPI 实际注册的路由在 `iptv_sever/api/routers/catchup.py`：
+FastAPI 路由：
 
 ```text
-GET|POST /api/v1/catchup/{catchup_path}
+GET|POST /api/v1/catchup/{catchup_path}   # 回看入口
+GET|POST /api/v1/catchup/media?u=...      # CDN m3u8/.ts 反代
 ```
 
-当前前端 API 默认都走 `/api/v1`，但外部回放入口走 `/catchup`。部署时需要保证 Nginx 对 `/catchup` 的反向代理配置与后端路由前缀一致；否则播放器请求会到达 Nginx，但无法命中后端回放路由。
+回看与直播分工：
+
+- **直播**：M3U 使用 udpxy（`http://{lan}:4022/rtp/...`），经 `source_iface` 收组播。
+- **回看**：播放器只访问局域网 `/catchup`；服务端拉取运营商 `10.255` CDN，并把 m3u8 内地址改写成 `/catchup/media`，避免电视直连 IPTV 内网。
 
 ### 10.4 请求参数兼容
 

@@ -14,6 +14,11 @@ services:
       # 数据持久化
       - iptv_out_data:/app/iptv_sever/out
       - iptv_state_data:/app/iptv_sever/api
+      # 回看反代 + 启动自动 udpxy（重建镜像前可保留）
+      - ./patches/backend/catchup_proxy.py:/app/iptv_sever/backend/catchup_proxy.py:ro
+      - ./patches/backend/core.py:/app/iptv_sever/backend/core.py:ro
+      - ./patches/routers/catchup.py:/app/iptv_sever/api/routers/catchup.py:ro
+      - ./patches/api/main.py:/app/iptv_sever/api/main.py:ro
     environment:
       - API_PORT=8089
       - API_HOST=0.0.0.0
