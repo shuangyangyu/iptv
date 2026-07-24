@@ -221,30 +221,45 @@ class MqttService:
                 "device": device,
             },
         )
-        # sensors（mtime 用日/月/年显示，避免 HA 直接显示 Unix 时间戳）
+        # 清除旧 Size 实体（空 retain 删除 Discovery）
+        for stale in ("m3u_size", "epg_size"):
+            topic = (
+                f"{self.discovery_prefix}/sensor/{self.client_id}/{stale}/config"
+            )
+            with self._lock:
+                if self._client:
+                    self._client.publish(topic, "", qos=1, retain=True)
+
+        # sensors：mtime 日/月/年；输出路径用 download_url
         mtime_tpl = (
             "{% if value_json.mtime %}"
             "{{ value_json.mtime | int | timestamp_custom('%d/%m/%Y %H:%M', true) }}"
             "{% else %}—{% endif %}"
         )
-        for key, name, template, unit in (
-            ("m3u_size", "IPTV M3U Size", "{{ value_json.size }}", "B"),
-            ("m3u_mtime", "IPTV M3U MTime", mtime_tpl, None),
-            ("epg_size", "IPTV EPG Size", "{{ value_json.size }}", "B"),
-            ("epg_mtime", "IPTV EPG MTime", mtime_tpl, None),
+        url_tpl = (
+            "{% if value_json.download_url %}"
+            "{{ value_json.download_url }}"
+            "{% else %}—{% endif %}"
+        )
+        for key, name, template in (
+            ("m3u_mtime", "IPTV M3U MTime", mtime_tpl),
+            ("m3u_url", "IPTV M3U URL", url_tpl),
+            ("epg_mtime", "IPTV EPG MTime", mtime_tpl),
+            ("epg_url", "IPTV EPG URL", url_tpl),
         ):
             src = "m3u" if key.startswith("m3u") else "epg"
-            payload = {
-                "name": name,
-                "unique_id": f"{self.client_id}_{key}",
-                "state_topic": self.topic(src),
-                "value_template": template,
-                "availability": [avail],
-                "device": device,
-            }
-            if unit:
-                payload["unit_of_measurement"] = unit
-            self._disc("sensor", key, payload)
+            self._disc(
+                "sensor",
+                key,
+                {
+                    "name": name,
+                    "unique_id": f"{self.client_id}_{key}",
+                    "state_topic": self.topic(src),
+                    "value_template": template,
+                    "availability": [avail],
+                    "device": device,
+                },
+            )
 
         self._disc(
             "sensor",
