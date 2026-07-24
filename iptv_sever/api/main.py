@@ -140,11 +140,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"启动 MQTT 失败: {e}", exc_info=True)
 
-    # scheduler
+    # scheduler：定时任务 + MQTT 状态定期刷新（连接数等）
     try:
         from .services.scheduler import start_scheduler
+        from .services.state import publish_status_mqtt
 
-        start_scheduler(cfg, _run_scheduled_jobs)
+        start_scheduler(
+            cfg,
+            _run_scheduled_jobs,
+            status_poll=publish_status_mqtt,
+            status_interval_seconds=15,
+        )
     except Exception as e:
         logger.error(f"启动调度器失败: {e}", exc_info=True)
 
