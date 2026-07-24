@@ -171,6 +171,8 @@ class MqttService:
         payload: Dict[str, Any],
     ) -> None:
         topic = f"{self.discovery_prefix}/{component}/{self.client_id}/{object_id}/config"
+        # object_id 固定 entity_id 后缀，避免 HA 按中文/展示名生成 iptv_241_iptv_*
+        payload = {**payload, "object_id": f"{self.client_id.replace('-', '_')}_{object_id}"}
         body = json.dumps(payload, ensure_ascii=False)
         with self._lock:
             if self._client:
