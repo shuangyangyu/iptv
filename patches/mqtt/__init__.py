@@ -221,8 +221,8 @@ class MqttService:
                 "device": device,
             },
         )
-        # 清除旧 Size 实体（空 retain 删除 Discovery）
-        for stale in ("m3u_size", "epg_size"):
+        # 清除旧 Size / Uptime 实体
+        for stale in ("m3u_size", "epg_size", "udpxy_uptime"):
             topic = (
                 f"{self.discovery_prefix}/sensor/{self.client_id}/{stale}/config"
             )
@@ -269,19 +269,6 @@ class MqttService:
                 "unique_id": f"{self.client_id}_udpxy_connections",
                 "state_topic": self.topic("udpxy"),
                 "value_template": "{{ value_json.connections }}",
-                "availability": [avail],
-                "device": device,
-            },
-        )
-        self._disc(
-            "sensor",
-            "udpxy_uptime",
-            {
-                "name": "IPTV UDPXY Uptime",
-                "unique_id": f"{self.client_id}_udpxy_uptime",
-                "state_topic": self.topic("udpxy"),
-                "value_template": "{{ value_json.uptime }}",
-                "unit_of_measurement": "s",
                 "availability": [avail],
                 "device": device,
             },
