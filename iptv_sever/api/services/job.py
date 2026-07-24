@@ -101,7 +101,11 @@ def build_epg_args(cfg: Dict[str, Any], web_base_url: str = None) -> List[str]:
     return args
 
 
-def execute_job(job_type: str, request_host: str = None) -> Dict[str, Any]:
+def execute_job(
+    job_type: str,
+    request_host: str = None,
+    overrides: Dict[str, Any] = None,
+) -> Dict[str, Any]:
     from .udpxy import get_udpxy_base_url
     from .state import set_catchup_override
 
@@ -114,7 +118,22 @@ def execute_job(job_type: str, request_host: str = None) -> Dict[str, Any]:
             "download_url": None,
         }
 
+    # logos：强制带 logo 重跑 m3u（logo 下载绑在 build_m3u 流程里）
+    if job_type == "logos":
+        append_runtime_log("INFO", "Logo 任务：以 download_logos=True 重新生成 M3U")
+        return execute_job(
+            "m3u",
+            request_host=request_host,
+            overrides={
+                **(overrides or {}),
+                "download_logos": True,
+                "localize_logos": True,
+            },
+        )
+
     cfg = get_config()
+    if overrides:
+        cfg = {**cfg, **overrides}
     append_runtime_log("INFO", f"开始执行任务：{job_type}")
 
     port = int(cfg.get("http_port") or 8088)
@@ -123,12 +142,6 @@ def execute_job(job_type: str, request_host: str = None) -> Dict[str, Any]:
     cfg["udpxy_base"] = udpxy_base
 
     backend_dir = IPTV_SEVER_DIR / "backend"
-
-    if job_type == "logos":
-        append_runtime_log("WARN", "Logo 下载会在生成 M3U 时自动执行")
-        update_job_result("logos", 0)
-        publish_status_mqtt()
-        return {"ok": True, "status": get_status(), "download_url": None}
 
     if job_type == "m3u":
         script_path = backend_dir / "build_m3u.py"

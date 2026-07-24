@@ -44,12 +44,9 @@ EPG：`http://<lan-ip>:8088/out/epg.xml`
 
 ```json
 {"action":"generate"}
-{"action":"job","name":"m3u"}
-{"action":"job","name":"epg"}
-{"action":"udpxy","name":"restart"}
 ```
 
-HA 中会出现 button：**一键生成**、Run M3U / Run EPG / Restart UDPXY 等。
+一键生成会跑 **M3U（含 Logo）+ EPG**。
 
 ## 架构
 

@@ -35,12 +35,15 @@ def _handle_mqtt_command(data: dict) -> None:
     name = (data.get("name") or "").strip().lower()
     svc = get_mqtt_service()
 
-    # 一键生成：m3u + epg
+    # 一键生成：m3u（含 logo）+ epg
     if action in ("generate", "run_all") or (
         action == "job" and name in ("all", "generate", "full")
     ):
-        logger.info("MQTT 一键生成：m3u + epg")
-        r_m3u = execute_job("m3u")
+        logger.info("MQTT 一键生成：m3u + epg + logo")
+        r_m3u = execute_job(
+            "m3u",
+            overrides={"download_logos": True, "localize_logos": True},
+        )
         r_epg = execute_job("epg")
         ok = bool(r_m3u.get("ok")) and bool(r_epg.get("ok"))
         if svc:
@@ -51,6 +54,7 @@ def _handle_mqtt_command(data: dict) -> None:
                     "action": "generate",
                     "m3u": bool(r_m3u.get("ok")),
                     "epg": bool(r_epg.get("ok")),
+                    "logo": bool(r_m3u.get("ok")),
                 },
                 retain=False,
             )
@@ -102,8 +106,8 @@ def _handle_mqtt_command(data: dict) -> None:
 def _run_scheduled_jobs() -> None:
     from .services.job import execute_job
 
-    logger.info("调度任务：开始 m3u + epg")
-    execute_job("m3u")
+    logger.info("调度任务：开始 m3u + epg + logo")
+    execute_job("m3u", overrides={"download_logos": True, "localize_logos": True})
     execute_job("epg")
 
 
