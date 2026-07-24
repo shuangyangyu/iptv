@@ -221,12 +221,17 @@ class MqttService:
                 "device": device,
             },
         )
-        # sensors
+        # sensors（mtime 用日/月/年显示，避免 HA 直接显示 Unix 时间戳）
+        mtime_tpl = (
+            "{% if value_json.mtime %}"
+            "{{ value_json.mtime | int | timestamp_custom('%d/%m/%Y %H:%M', true) }}"
+            "{% else %}—{% endif %}"
+        )
         for key, name, template, unit in (
             ("m3u_size", "IPTV M3U Size", "{{ value_json.size }}", "B"),
-            ("m3u_mtime", "IPTV M3U MTime", "{{ value_json.mtime }}", None),
+            ("m3u_mtime", "IPTV M3U MTime", mtime_tpl, None),
             ("epg_size", "IPTV EPG Size", "{{ value_json.size }}", "B"),
-            ("epg_mtime", "IPTV EPG MTime", "{{ value_json.mtime }}", None),
+            ("epg_mtime", "IPTV EPG MTime", mtime_tpl, None),
         ):
             src = "m3u" if key.startswith("m3u") else "epg"
             payload = {
