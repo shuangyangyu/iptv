@@ -257,7 +257,8 @@ def localize_logos(
                     tvg_logo=local_url,
                     chno=ch.chno,
                     stream_url=ch.stream_url,
-                    catchup_source=ch.catchup_source,  # 保留 catchup_source
+                    catchup_source=ch.catchup_source,
+                    catchup_path=ch.catchup_path,
                 )
             )
         else:

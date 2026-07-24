@@ -67,6 +67,11 @@ def build_m3u_args(
     args.extend(["--web-base-url", web_base_url])
     if not cfg.get("logo_skip_existing", True):
         args.append("--no-logo-skip-existing")
+    # 默认同时生成 TiviMate + APTV 两套
+    style = str(cfg.get("catchup_style") or "both")
+    args.extend(["--catchup-style", style])
+    aptv_name = Path(str(cfg.get("output_m3u_aptv") or "iptv-aptv.m3u")).name
+    args.extend(["--out-aptv", str(OUT_DIR / aptv_name)])
     return args
 
 
@@ -195,7 +200,18 @@ def execute_job(
                             "mtime": int(out_path.stat().st_mtime),
                         },
                     )
-                append_runtime_log("OK", "M3U 生成完成")
+                aptv_name = Path(cfg.get("output_m3u_aptv") or "iptv-aptv.m3u").name
+                aptv_path = OUT_DIR / aptv_name
+                if aptv_path.exists():
+                    update_file_status(
+                        "m3u_aptv",
+                        {
+                            "exists": True,
+                            "size": aptv_path.stat().st_size,
+                            "mtime": int(aptv_path.stat().st_mtime),
+                        },
+                    )
+                append_runtime_log("OK", "M3U 生成完成（含 TiviMate/APTV 双列表）")
                 try:
                     from iptv_sever.backend.core import (
                         extract_channels,

@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 _lock = threading.RLock()
 _status: Dict[str, Any] = {
     "m3u": {"exists": False, "size": 0, "mtime": 0},
+    "m3u_aptv": {"exists": False, "size": 0, "mtime": 0},
     "epg": {"exists": False, "size": 0, "mtime": 0},
     "last_job": "",
     "last_job_rc": None,
@@ -31,6 +32,7 @@ def get_runtime_status() -> Dict[str, Any]:
     with _lock:
         return {
             "m3u": dict(_status.get("m3u") or {}),
+            "m3u_aptv": dict(_status.get("m3u_aptv") or {}),
             "epg": dict(_status.get("epg") or {}),
             "last_job": _status.get("last_job", ""),
             "last_job_rc": _status.get("last_job_rc"),
@@ -47,7 +49,7 @@ def update_job_result(job_type: str, rc: Optional[int]) -> None:
 
 def update_file_status(kind: str, meta: Dict[str, Any]) -> None:
     with _lock:
-        if kind in ("m3u", "epg"):
+        if kind in ("m3u", "m3u_aptv", "epg"):
             _status[kind] = dict(meta)
 
 

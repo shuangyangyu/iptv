@@ -241,20 +241,20 @@ class MqttService:
             "{{ value_json.download_url }}"
             "{% else %}—{% endif %}"
         )
-        for key, name, template in (
-            ("m3u_mtime", "IPTV M3U MTime", mtime_tpl),
-            ("m3u_url", "IPTV M3U URL", url_tpl),
-            ("epg_mtime", "IPTV EPG MTime", mtime_tpl),
-            ("epg_url", "IPTV EPG URL", url_tpl),
+        for key, name, template, topic_key in (
+            ("m3u_mtime", "IPTV M3U MTime", mtime_tpl, "m3u"),
+            ("m3u_url", "IPTV M3U URL (TiviMate)", url_tpl, "m3u"),
+            ("m3u_aptv_url", "IPTV M3U URL (APTV)", url_tpl, "m3u_aptv"),
+            ("epg_mtime", "IPTV EPG MTime", mtime_tpl, "epg"),
+            ("epg_url", "IPTV EPG URL", url_tpl, "epg"),
         ):
-            src = "m3u" if key.startswith("m3u") else "epg"
             self._disc(
                 "sensor",
                 key,
                 {
                     "name": name,
                     "unique_id": f"{self.client_id}_{key}",
-                    "state_topic": self.topic(src),
+                    "state_topic": self.topic(topic_key),
                     "value_template": template,
                     "availability": [avail],
                     "device": device,
@@ -319,6 +319,8 @@ def publish_all_status(status: Dict[str, Any]) -> None:
     svc.publish("status", status, retain=True)
     if "m3u" in status:
         svc.publish("m3u", status["m3u"], retain=True)
+    if "m3u_aptv" in status:
+        svc.publish("m3u_aptv", status["m3u_aptv"], retain=True)
     if "epg" in status:
         svc.publish("epg", status["epg"], retain=True)
     if "udpxy" in status:

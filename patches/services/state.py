@@ -60,6 +60,23 @@ def get_status() -> Dict[str, Any]:
             "download_url": None,
         }
 
+    aptv_filename = Path(cfg.get("output_m3u_aptv") or "iptv-aptv.m3u").name
+    aptv_path = out_dir_abs / aptv_filename
+    if aptv_path.exists():
+        st["m3u_aptv"] = {
+            "exists": True,
+            "size": aptv_path.stat().st_size,
+            "mtime": int(aptv_path.stat().st_mtime),
+            "download_url": f"{web_base_url}/out/{aptv_filename}",
+        }
+    else:
+        st["m3u_aptv"] = {
+            "exists": False,
+            "size": 0,
+            "mtime": 0,
+            "download_url": None,
+        }
+
     epg_filename = Path(cfg.get("epg_out", "epg.xml")).name
     epg_path = out_dir_abs / epg_filename
     if epg_path.exists():

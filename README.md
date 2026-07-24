@@ -20,7 +20,10 @@ docker compose up -d
 | 8088 | `/out` m3u/epg、`/catchup` 回看、`/health` |
 | 4022 | udpxy 直播 |
 
-播放列表：`http://<lan-ip>:8088/out/iptv.m3u`  
+播放列表：
+- TiviMate：`http://<lan-ip>:8088/out/iptv.m3u`（`{start}/{end}`）
+- APTV：`http://<lan-ip>:8088/out/iptv-aptv.m3u`（`${(b)}/${(e)}`）
+
 EPG：`http://<lan-ip>:8088/out/epg.xml`
 
 ## 配置

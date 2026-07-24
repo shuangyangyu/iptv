@@ -81,6 +81,7 @@ class Channel:
     chno: str
     stream_url: str
     catchup_source: str = ""  # 回放URL模板（可选）
+    catchup_path: str = ""  # 运营商回看路径，用于生成不同播放器模板
 
 
 def _category_name(cat: Dict) -> str:
@@ -232,31 +233,31 @@ def extract_channels(categories: List[Dict], *, tvg_id_field: str = "primaryid",
 
         # 提取回放信息（从 zx 字段）
         catchup_source = ""
+        channel_catchup_path = ""
         zx = str(ch.get("zx") or "").strip()
         if zx:
             try:
                 parsed = urlparse(zx)
-                catchup_path = parsed.path.lstrip('/')  # 去掉开头的 /
-                
+                channel_catchup_path = parsed.path.lstrip("/")  # 去掉开头的 /
+
                 # 提取服务器地址（只提取第一次找到的）
                 if not catchup_host and parsed.hostname and parsed.port:
                     catchup_host = parsed.hostname
                     catchup_port = parsed.port
-                    
+
                     # 提取 virtualDomain（如果有）
                     query_params = parse_qs(parsed.query)
-                    if 'virtualDomain' in query_params:
-                        virtual_domain = query_params['virtualDomain'][0]
-                
-                # 构建代理服务器的 catchup-source 模板（只有当 web_base_url 存在时）
-                if catchup_path and web_base_url:
-                    # 原仓库格式（你迁移前可用）：programbegin={start}&programend={end}
-                    catchup_source = (
-                        f"{web_base_url.rstrip('/')}/catchup/{catchup_path}"
-                        f"?programbegin={{start}}&programend={{end}}"
+                    if "virtualDomain" in query_params:
+                        virtual_domain = query_params["virtualDomain"][0]
+
+                # 构建代理服务器的 catchup-source（默认 TiviMate：{start}/{end}）
+                if channel_catchup_path and web_base_url:
+                    catchup_source = build_catchup_source(
+                        channel_catchup_path, web_base_url, style="tivimate"
                     )
             except Exception:
-                pass  # 如果解析失败，catchup_source 保持为空
+                channel_catchup_path = ""
+                catchup_source = ""
 
         dedup_key = tvg_id if tvg_id else f"{name}|{multi_zx}"
         if dedup_key in seen:
@@ -273,10 +274,66 @@ def extract_channels(categories: List[Dict], *, tvg_id_field: str = "primaryid",
                 chno=chno,
                 stream_url=multi_zx,
                 catchup_source=catchup_source,
+                catchup_path=channel_catchup_path if catchup_source else "",
             )
         )
 
     return out, catchup_host, catchup_port, virtual_domain
+
+
+def build_catchup_source(
+    catchup_path: str,
+    web_base_url: str,
+    *,
+    style: str = "tivimate",
+) -> str:
+    """
+    按播放器生成 catchup-source：
+    - tivimate: programbegin={start}&programend={end}
+    - aptv: programbegin=${(b)yyyyMMddHHmmss}&programend=${(e)yyyyMMddHHmmss}
+    """
+    path = (catchup_path or "").lstrip("/")
+    base = (web_base_url or "").rstrip("/")
+    if not path or not base:
+        return ""
+    root = f"{base}/catchup/{path}"
+    style_l = (style or "tivimate").strip().lower()
+    if style_l == "aptv":
+        # APTV 官方占位符，见 https://docs.aptvapp.com/play/playseek
+        return (
+            f"{root}?programbegin=${{(b)yyyyMMddHHmmss}}"
+            f"&programend=${{(e)yyyyMMddHHmmss}}"
+        )
+    # TiviMate / 默认
+    return f"{root}?programbegin={{start}}&programend={{end}}"
+
+
+def with_catchup_style(
+    channels: List[Channel],
+    web_base_url: str,
+    *,
+    style: str = "tivimate",
+) -> List[Channel]:
+    """复制频道列表并按 style 重写 catchup-source。"""
+    out: List[Channel] = []
+    for ch in channels:
+        src = ch.catchup_source
+        if ch.catchup_path and web_base_url:
+            src = build_catchup_source(ch.catchup_path, web_base_url, style=style)
+        out.append(
+            Channel(
+                name=ch.name,
+                group=ch.group,
+                tvg_id=ch.tvg_id,
+                tvg_name=ch.tvg_name,
+                tvg_logo=ch.tvg_logo,
+                chno=ch.chno,
+                stream_url=ch.stream_url,
+                catchup_source=src,
+                catchup_path=ch.catchup_path,
+            )
+        )
+    return out
 
 
 def convert_multicast_to_udpxy(stream_url: str, udpxy_base: str) -> str:

@@ -11,6 +11,8 @@ http:
 
 output:
   m3u: iptv.m3u
+  m3u_aptv: iptv-aptv.m3u
+  catchup_style: both   # tivimate | aptv | both
   epg: epg.xml
   download_logos: true
   localize_logos: true

@@ -47,6 +47,8 @@ def default_yaml() -> Dict[str, Any]:
         "http": {"host": "0.0.0.0", "port": 8088},
         "output": {
             "m3u": "iptv.m3u",
+            "m3u_aptv": "iptv-aptv.m3u",
+            "catchup_style": "both",  # tivimate | aptv | both
             "epg": "epg.xml",
             "download_logos": True,
             "localize_logos": True,
@@ -191,6 +193,8 @@ def flatten_runtime_config(raw: Optional[Dict[str, Any]] = None) -> Dict[str, An
         "source_iface": raw.get("source_iface"),
         "input_url": raw.get("input_url"),
         "output_m3u": out.get("m3u", "iptv.m3u"),
+        "output_m3u_aptv": out.get("m3u_aptv", "iptv-aptv.m3u"),
+        "catchup_style": out.get("catchup_style", "both"),
         "epg_out": out.get("epg", "epg.xml"),
         "download_logos": bool(out.get("download_logos", True)),
         "localize_logos": bool(out.get("localize_logos", True)),
