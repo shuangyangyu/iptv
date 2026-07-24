@@ -1,0 +1,57 @@
+# 从 192.168.1.241 现网 state.json 迁移的示例
+# 复制为 config.yaml 后按需改 mqtt.host
+
+local_iface: ens160
+source_iface: ens192
+input_url: "http://yepg.99tv.com.cn:99/pic/channel/list/channel_5.js"
+
+http:
+  host: "0.0.0.0"
+  port: 8088
+
+output:
+  m3u: iptv.m3u
+  epg: epg.xml
+  download_logos: true
+  localize_logos: true
+  logo_skip_existing: true
+
+timeout_s: 10.0
+user_agent: "curl/8.0.0"
+
+udpxy:
+  enabled: true
+  port: 4022
+  bind_address: "0.0.0.0"
+  max_connections: 5
+  log_file: /var/log/udpxy.log
+  pid_file: /tmp/udpxy.pid
+
+catchup:
+  target_host: "10.255.129.26"
+  target_port: 6060
+  virtual_domain: "hls.tvod_hls.zte.com"
+
+epg:
+  base_url: "http://cms.99tv.com.cn:99/cms/liveVideoOtt_searchProgramList6p1.action"
+  riddle: "0e5172956bf2c1d87381056eb23ebe5a"
+  time_ms: "1764552092957"
+  days_forward: 7
+  days_back: 0
+
+scheduler:
+  mode: interval
+  interval_hours: 6
+  interval_minutes: 0
+  run_on_startup: false
+
+mqtt:
+  enabled: true
+  host: "192.168.1.230"   # 改成你的 MQTT / HA broker
+  port: 1883
+  username: ""
+  password: ""
+  topic_prefix: iptv
+  discovery_prefix: homeassistant
+  client_id: iptv-241
+  device_name: IPTV 241

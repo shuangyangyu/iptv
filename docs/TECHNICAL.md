@@ -1,82 +1,74 @@
 # IPTV Server 技术文档
 
-本文档说明 IPTV Server 的设计原理、核心流程、模块职责和部署运行逻辑。当前项目以 Docker Compose 为主要部署方式，由 FastAPI 后端、Vue 前端、Nginx 反向代理、UDPXY 和若干生成脚本组成。
+本文档说明 IPTV Server 的设计原理、核心流程与部署方式。当前以 **YAML 配置 + 单进程 FastAPI（8088）+ MQTT/HA Discovery** 为主，无 Web 管理 UI。
 
 ## 1. 设计目标
 
-IPTV Server 解决的是 IPTV 专网资源与普通播放器之间的适配问题：
+- 将运营商频道列表转为播放器可识别的 M3U。
+- 将运营商 EPG 转为 XMLTV。
+- 将 `rtp://` / `udp://` 组播转为 udpxy HTTP。
+- 回看经本机 `/catchup` 反代，播放器只访问局域网。
+- 配置用 `config.yaml`；状态与控制走 MQTT（含 Home Assistant Discovery）。
 
-- 将运营商频道列表接口转换为播放器可识别的 M3U 播放列表。
-- 将运营商 EPG 接口转换为标准 XMLTV 节目单。
-- 将 `rtp://`、`udp://` 组播流转换为播放器可访问的 HTTP 地址。
-- 自动生成对外可访问的 M3U、EPG、Logo 和回放代理地址。
-- 通过 Web 控制台管理配置、任务、日志、网络接口和 UDPXY 服务。
+典型双网卡：
 
-典型使用场景是双网卡环境：
-
-- `source_iface` 连接 IPTV 专网，用于访问频道源、EPG 接口和组播流。
-- `local_iface` 连接家庭局域网，用于给播放器提供 Web、M3U、EPG、Logo 和 UDPXY 地址。
+- `source_iface`：IPTV 专网（组播 / EPG / CDN）
+- `local_iface`：家庭局域网（对外 URL、播放器访问）
 
 ## 2. 总体架构
 
 ```text
-播放器 / 浏览器
+播放器
     ↓
-Nginx 前端容器（8088）
-    ├── /                 → Vue 静态页面
-    ├── /api/*            → FastAPI 后端（8089）
-    ├── /out/*            → FastAPI 静态输出目录
-    ├── /catchup/*        → FastAPI 回放代理
-    └── /health           → FastAPI 健康检查
+FastAPI（8088，host 网络）
+    ├── /out/*       → m3u / epg / logos
+    ├── /catchup/*   → 回看反代（含 /catchup/media）
+    └── /health
 
-FastAPI 后端
-    ├── 配置与状态：state.json
-    ├── 任务执行：build_m3u.py / build_epg.py
-    ├── UDPXY 管理：udpxy 进程
-    ├── 网络接口探测：source_iface / local_iface
-    └── 输出目录：out/iptv.m3u、out/epg.xml、out/logos/*
+APScheduler → 定时 m3u/epg
+UDPXY :4022 → 直播
+MQTT → 状态 retain + HA Discovery + cmd
 
-IPTV 专网 / 运营商接口
-    ├── 频道列表接口 channel_5.js
-    ├── EPG 节目单接口
-    ├── 组播流 rtp:// 或 udp://
-    └── 回放接口
+config.yaml → 全部运行参数
 ```
 
 ## 3. 运行时组件
 
 ### 3.1 Docker Compose
 
-`docker-compose.yml` 定义两个服务：
+单服务 `iptv`（`network_mode: host`）：
 
-- `backend`：使用 `shuangyangyu/iptv-backend:latest`，运行 FastAPI、任务脚本、cron 和 UDPXY 管理逻辑。
-- `frontend`：使用 `shuangyangyu/iptv-frontend:latest`，运行 Nginx 和 Vue 构建产物。
+- 镜像 `shuangyangyu/iptv-backend`（或本地 `docker compose build`）
+- 挂载 `./config.yaml` → `/app/config.yaml`
+- volume `iptv_out_data` → `/app/iptv_sever/out`
 
-当前默认使用 `network_mode: host`，原因是 IPTV 场景通常需要访问主机网络接口和组播网络。`backend` 使用 `API_PORT=8089`，`frontend` 的 Nginx 对外监听 `8088` 并反代后端。
+### 3.2 启动
 
-持久化数据通过 Docker volume 保存：
+`docker-entrypoint.sh` 直接启动 uvicorn，监听 `API_PORT`（默认 8088）。  
+进程内启动：udpxy、MQTT、APScheduler。
 
-- `iptv_out_data` → `/app/iptv_sever/out`
-- `iptv_state_data` → `/app/iptv_sever/api`
+### 3.3 配置
 
-### 3.2 容器启动
+见仓库根目录 `config.example.yaml`。运行时由 `iptv_sever/api/settings.py` 加载并展平。  
+改配置后重启容器；MQTT 也可发 `{"action":"reload_config"}`（重新读 YAML，调度器需重启进程才完全生效）。
 
-`docker-entrypoint.sh` 是后端容器入口：
+### 3.4 MQTT
 
-1. 启动 `cron` 或 `crond`，用于定时任务。
-2. 检查 cron 进程是否存在，失败只记录警告，不阻止 API 启动。
-3. 通过 `uvicorn iptv_sever.api.main:app` 启动 FastAPI。
-4. 端口来自 `API_PORT` 环境变量，默认值为 `8088`，当前 Compose 中设置为 `8089`。
+前缀默认 `iptv`：
 
-### 3.3 Nginx 入口
+| Topic | 说明 |
+|-------|------|
+| `iptv/health` | online/offline（LWT） |
+| `iptv/status` | 汇总 |
+| `iptv/m3u` `iptv/epg` `iptv/udpxy` `iptv/job` | 分项 retain |
+| `iptv/cmd` | 命令 JSON |
+| `iptv/event` | 命令结果 |
 
-`nginx.conf` 统一对外暴露 `8088`：
+命令示例：`{"action":"job","name":"m3u"}`、`{"action":"udpxy","name":"restart"}`。
 
-- `/`：前端单页应用，使用 `try_files` 回退到 `index.html`。
-- `/api`：反向代理到 `localhost:8089`。
-- `/out`：反向代理到 FastAPI 静态文件服务。
-- `/catchup`：反向代理到回放代理，超时时间更长。
-- `/health`：反向代理到后端健康检查。
+HA Discovery 前缀默认 `homeassistant`，自动注册 sensor / binary_sensor / button。
+
+---
 
 ## 4. 后端服务结构
 

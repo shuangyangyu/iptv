@@ -60,7 +60,8 @@ except ImportError as e:
         raise RuntimeError("catchup proxy unavailable")
 
 
-router = APIRouter(prefix="/api/v1", tags=["回放代理"])
+# 对外直接挂在 /catchup（无 Nginx 反代前缀重写）
+router = APIRouter(tags=["回放代理"])
 
 _DROP_HEADERS = {
     "transfer-encoding",
@@ -82,19 +83,19 @@ def _public_base(request: Request) -> str:
     """播放器访问的局域网地址（8088）。"""
     from ..services.state import get_config, get_server_base_url
 
-    cfg_base = get_server_base_url(get_config(), port=8088).rstrip("/")
+    cfg = get_config()
+    port = int(cfg.get("http_port") or 8088)
+    cfg_base = get_server_base_url(cfg, port=port).rstrip("/")
     if cfg_base:
         return cfg_base
 
     proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "http"
     host = request.headers.get("x-forwarded-host") or request.headers.get("host")
     if host:
-        if host.endswith(":8089"):
-            host = host[:-5] + ":8088"
-        elif ":" not in host:
-            host = f"{host}:8088"
+        if ":" not in host:
+            host = f"{host}:{port}"
         return f"{proto}://{host}"
-    return "http://127.0.0.1:8088"
+    return f"http://127.0.0.1:{port}"
 
 
 def _media_proxy_base(request: Request) -> str:

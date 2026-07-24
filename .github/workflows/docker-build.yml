@@ -4,19 +4,17 @@ on:
   push:
     branches:
       - master
+      - rewrite/config-mqtt
   workflow_dispatch:
 
 env:
   DOCKERHUB_USERNAME: shuangyangyu
   IMAGE_BACKEND: iptv-backend
-  IMAGE_FRONTEND: iptv-frontend
 
 jobs:
   build-and-push:
-    name: Build and Push Docker Images
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    # 如果使用 Environment secrets，取消注释下面这行并创建对应的 Environment
-    # environment: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,14 +35,7 @@ jobs:
           images: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_BACKEND }}
           tags: |
             type=raw,value=latest
-
-      - name: Extract metadata for frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_FRONTEND }}
-          tags: |
-            type=raw,value=latest
+            type=ref,event=branch
 
       - name: Build and push backend image
         uses: docker/build-push-action@v5
@@ -56,80 +47,3 @@ jobs:
           labels: ${{ steps.meta-backend.outputs.labels }}
           cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_BACKEND }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_BACKEND }}:buildcache,mode=max
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.frontend
-          push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_FRONTEND }}:buildcache
-          cache-to: type=registry,ref=${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_FRONTEND }}:buildcache,mode=max
-
-      - name: Update Docker Hub description for backend
-        run: |
-          # 登录 Docker Hub 获取 JWT token
-          TOKEN=$(curl -s -X POST \
-            -H "Content-Type: application/json" \
-            -d "{\"username\":\"${{ secrets.DOCKERHUB_USERNAME }}\",\"password\":\"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
-            https://hub.docker.com/v2/users/login/ | jq -r .token)
-          
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Error: Failed to get Docker Hub token"
-            exit 1
-          fi
-          
-          # 读取 Docker Hub 文档内容
-          DESCRIPTION=$(cat docs/README_DOCKERHUB.md)
-          
-          # 转义 JSON 特殊字符
-          DESCRIPTION_JSON=$(echo "$DESCRIPTION" | jq -Rs .)
-          
-          # 构建更新请求 JSON
-          UPDATE_JSON=$(jq -n \
-            --arg desc "IPTV Server - M3U/EPG 生成服务，包含 FastAPI 后端和 Vue.js 前端，支持 UDPXY 代理和定时任务。" \
-            --argjson full "$DESCRIPTION_JSON" \
-            '{description: $desc, full_description: $full}')
-          
-          # 更新 Docker Hub 仓库描述
-          curl -s -X PATCH \
-            -H "Authorization: JWT ${TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$UPDATE_JSON" \
-            https://hub.docker.com/v2/repositories/${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_BACKEND }}/ \
-            | jq -r '.name // "Success"'
-
-      - name: Update Docker Hub description for frontend
-        run: |
-          # 登录 Docker Hub 获取 JWT token
-          TOKEN=$(curl -s -X POST \
-            -H "Content-Type: application/json" \
-            -d "{\"username\":\"${{ secrets.DOCKERHUB_USERNAME }}\",\"password\":\"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
-            https://hub.docker.com/v2/users/login/ | jq -r .token)
-          
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Error: Failed to get Docker Hub token"
-            exit 1
-          fi
-          
-          # 读取 Docker Hub 文档内容
-          DESCRIPTION=$(cat docs/README_DOCKERHUB.md)
-          
-          # 转义 JSON 特殊字符
-          DESCRIPTION_JSON=$(echo "$DESCRIPTION" | jq -Rs .)
-          
-          # 构建更新请求 JSON
-          UPDATE_JSON=$(jq -n \
-            --arg desc "IPTV Server Frontend - Vue.js 前端，Nginx Web 服务器。" \
-            --argjson full "$DESCRIPTION_JSON" \
-            '{description: $desc, full_description: $full}')
-          
-          # 更新 Docker Hub 仓库描述
-          curl -s -X PATCH \
-            -H "Authorization: JWT ${TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$UPDATE_JSON" \
-            https://hub.docker.com/v2/repositories/${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_FRONTEND }}/ \
-            | jq -r '.name // "Success"'
