@@ -43,12 +43,13 @@ EPG：`http://<lan-ip>:8088/out/epg.xml`
 **命令 topic：** `{prefix}/cmd`
 
 ```json
+{"action":"generate"}
 {"action":"job","name":"m3u"}
 {"action":"job","name":"epg"}
 {"action":"udpxy","name":"restart"}
 ```
 
-HA 中会出现 button：Run M3U / Run EPG / Restart UDPXY 等。
+HA 中会出现 button：**一键生成**、Run M3U / Run EPG / Restart UDPXY 等。
 
 ## 架构
 

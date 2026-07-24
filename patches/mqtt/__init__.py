@@ -288,6 +288,7 @@ class MqttService:
         )
         # buttons -> publish to cmd
         for object_id, name, cmd in (
+            ("generate", "IPTV 一键生成", {"action": "generate"}),
             ("run_m3u", "IPTV Run M3U", {"action": "job", "name": "m3u"}),
             ("run_epg", "IPTV Run EPG", {"action": "job", "name": "epg"}),
             ("run_logos", "IPTV Run Logos", {"action": "job", "name": "logos"}),

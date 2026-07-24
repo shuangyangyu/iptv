@@ -35,6 +35,27 @@ def _handle_mqtt_command(data: dict) -> None:
     name = (data.get("name") or "").strip().lower()
     svc = get_mqtt_service()
 
+    # 一键生成：m3u + epg
+    if action in ("generate", "run_all") or (
+        action == "job" and name in ("all", "generate", "full")
+    ):
+        logger.info("MQTT 一键生成：m3u + epg")
+        r_m3u = execute_job("m3u")
+        r_epg = execute_job("epg")
+        ok = bool(r_m3u.get("ok")) and bool(r_epg.get("ok"))
+        if svc:
+            svc.publish(
+                "event",
+                {
+                    "ok": ok,
+                    "action": "generate",
+                    "m3u": bool(r_m3u.get("ok")),
+                    "epg": bool(r_epg.get("ok")),
+                },
+                retain=False,
+            )
+        return
+
     if action == "job":
         result = execute_job(name)
         if svc:
