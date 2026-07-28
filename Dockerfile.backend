@@ -57,6 +57,8 @@ RUN pip install --no-cache-dir -r /app/iptv_sever/api/requirements.txt
 # 复制项目代码（从项目根目录构建，路径为 iptv_sever/）
 COPY iptv_sever/api /app/iptv_sever/api
 COPY iptv_sever/backend /app/iptv_sever/backend
+COPY iptv_sever/mqtt /app/iptv_sever/mqtt
+COPY config.example.yaml /app/config.example.yaml
 
 # 创建 __init__.py 文件（如果不存在）
 RUN touch /app/iptv_sever/__init__.py 2>/dev/null || true

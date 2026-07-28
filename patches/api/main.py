@@ -30,55 +30,34 @@ def _handle_mqtt_command(data: dict) -> None:
     from .services.state import publish_status_mqtt
     from .services import udpxy as udpxy_svc
     from iptv_sever.mqtt import get_mqtt_service
-    import threading
 
     action = (data.get("action") or "").strip().lower()
     name = (data.get("name") or "").strip().lower()
     svc = get_mqtt_service()
 
-    # 一键生成：m3u（含 logo）+ epg（后台线程，避免阻塞 MQTT）
+    # 一键生成：m3u（含 logo）+ epg
     if action in ("generate", "run_all") or (
         action == "job" and name in ("all", "generate", "full")
     ):
         logger.info("MQTT 一键生成：m3u + epg + logo")
-
-        def _run_generate():
-            try:
-                r_m3u = execute_job(
-                    "m3u",
-                    overrides={"download_logos": True, "localize_logos": True},
-                )
-                r_epg = execute_job("epg")
-                ok = bool(r_m3u.get("ok")) and bool(r_epg.get("ok"))
-                publish_status_mqtt()
-                if svc:
-                    svc.publish(
-                        "event",
-                        {
-                            "ok": ok,
-                            "action": "generate",
-                            "m3u": bool(r_m3u.get("ok")),
-                            "epg": bool(r_epg.get("ok")),
-                            "logo": bool(r_m3u.get("ok")),
-                        },
-                        retain=False,
-                    )
-                logger.info(
-                    "一键生成结束 ok=%s m3u=%s epg=%s",
-                    ok,
-                    r_m3u.get("ok"),
-                    r_epg.get("ok"),
-                )
-            except Exception as e:
-                logger.error("一键生成失败: %s", e, exc_info=True)
-                if svc:
-                    svc.publish(
-                        "event",
-                        {"ok": False, "action": "generate", "error": str(e)},
-                        retain=False,
-                    )
-
-        threading.Thread(target=_run_generate, name="iptv-generate", daemon=True).start()
+        r_m3u = execute_job(
+            "m3u",
+            overrides={"download_logos": True, "localize_logos": True},
+        )
+        r_epg = execute_job("epg")
+        ok = bool(r_m3u.get("ok")) and bool(r_epg.get("ok"))
+        if svc:
+            svc.publish(
+                "event",
+                {
+                    "ok": ok,
+                    "action": "generate",
+                    "m3u": bool(r_m3u.get("ok")),
+                    "epg": bool(r_epg.get("ok")),
+                    "logo": bool(r_m3u.get("ok")),
+                },
+                retain=False,
+            )
         return
 
     if action == "job":
@@ -119,23 +98,6 @@ def _handle_mqtt_command(data: dict) -> None:
         publish_status_mqtt()
         if svc:
             svc.publish("event", {"ok": True, "action": "reload_config"}, retain=False)
-        return
-
-    if action in ("diag", "network_diag", "check_network"):
-        from .services.network_diag import run_network_diag
-
-        result = run_network_diag()
-        if svc:
-            svc.publish("diag", result, retain=True)
-            svc.publish(
-                "event",
-                {
-                    "ok": bool(result.get("ok")),
-                    "action": "diag",
-                    "summary": result.get("summary"),
-                },
-                retain=False,
-            )
         return
 
     raise ValueError(f"unknown action: {action}")
@@ -228,32 +190,13 @@ async def root():
     return {
         "name": "IPTV Server",
         "version": "3.0.0",
-        "endpoints": ["/health", "/diag", "/out/", "/catchup/"],
+        "endpoints": ["/health", "/out/", "/catchup/"],
     }
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
-
-
-@app.get("/diag")
-async def diag():
-    """网络环境自检（双网卡 / 网关 / DNS / 频道源 / udpxy / 回看）。"""
-    from .services.network_diag import get_last_diag, run_network_diag
-    from iptv_sever.mqtt import get_mqtt_service
-
-    result = run_network_diag()
-    svc = get_mqtt_service()
-    if svc:
-        try:
-            svc.publish("diag", result, retain=True)
-        except Exception:
-            pass
-    # 附带上次结果字段，方便客户端对比
-    if get_last_diag():
-        pass
-    return result
 
 
 if __name__ == "__main__":

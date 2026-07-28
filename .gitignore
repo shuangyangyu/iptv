@@ -28,6 +28,8 @@ downloads/
 # 状态文件和测试文件
 iptv_sever/api/state.json
 test_openai.py
+config.yaml
+.env
 
 # 旧文档目录（不推送；当前文档使用 docs/）
 文档/
