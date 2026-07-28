@@ -136,12 +136,15 @@ class UdpxyManager:
             pass
         
         # 构建 udpxy 命令参数
+        # -B: 组播接收缓冲；默认仅 2KB，IPTV 易卡顿，提高到 2MB
+        buf = str(self.config.get("buffer_size") or "2Mb")
         cmd = [
             self.udpxy_binary,
             "-p", str(self.config["port"]),
             "-a", self.config["bind_address"],
             "-m", self.config["source_iface"],
             "-c", str(self.config["max_connections"]),
+            "-B", buf,
         ]
         
         # 检查日志文件权限，如果无法写入则不使用日志文件

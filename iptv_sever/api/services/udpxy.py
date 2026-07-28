@@ -42,6 +42,7 @@ def get_udpxy_config() -> Dict[str, Any]:
     udpxy.setdefault("bind_address", "0.0.0.0")
     udpxy.setdefault("source_iface", "eth1")
     udpxy.setdefault("max_connections", 5)
+    udpxy.setdefault("buffer_size", "2Mb")
     udpxy.setdefault("log_file", "/var/log/udpxy.log")
     udpxy.setdefault("pid_file", "/tmp/udpxy.pid")
     return udpxy
