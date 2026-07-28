@@ -3,6 +3,7 @@
 
 local_iface: ens160
 source_iface: ens192
+iptv_gateway: "10.170.160.1"
 input_url: "http://yepg.99tv.com.cn:99/pic/channel/list/channel_5.js"
 
 http:

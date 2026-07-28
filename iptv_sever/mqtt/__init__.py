@@ -275,6 +275,32 @@ class MqttService:
                 "device": device,
             },
         )
+        self._disc(
+            "binary_sensor",
+            "network_ok",
+            {
+                "name": "IPTV Network OK",
+                "unique_id": f"{self.client_id}_network_ok",
+                "state_topic": self.topic("diag"),
+                "value_template": "{{ 'ON' if value_json.ok else 'OFF' }}",
+                "availability": [avail],
+                "device": device,
+            },
+        )
+        self._disc(
+            "sensor",
+            "network_summary",
+            {
+                "name": "IPTV Network Summary",
+                "unique_id": f"{self.client_id}_network_summary",
+                "state_topic": self.topic("diag"),
+                "value_template": "{{ value_json.summary }}",
+                "json_attributes_topic": self.topic("diag"),
+                "json_attributes_template": "{{ {'ok': value_json.ok, 'detail': value_json.detail, 'fail': value_json.fail, 'warn': value_json.warn, 'source_ip': value_json.source_ip, 'checks': value_json.checks, 'at': value_json.at} | tojson }}",
+                "availability": [avail],
+                "device": device,
+            },
+        )
         # buttons -> publish to cmd
         for object_id, name, cmd in (
             ("generate", "IPTV Create All", {"action": "generate"}),
@@ -286,6 +312,7 @@ class MqttService:
                 "IPTV Restart UDPXY",
                 {"action": "udpxy", "name": "restart"},
             ),
+            ("network_diag", "IPTV Network Check", {"action": "diag"}),
         ):
             self._disc(
                 "button",
@@ -333,4 +360,12 @@ def publish_all_status(status: Dict[str, Any]) -> None:
         "at": status.get("last_job_at") or 0,
     }
     svc.publish("job", job, retain=True)
+    try:
+        from iptv_sever.api.services.network_diag import get_last_diag
+
+        diag = get_last_diag()
+        if diag:
+            svc.publish("diag", diag, retain=True)
+    except Exception:
+        pass
     svc.publish("health", "online", retain=True, raw=True)

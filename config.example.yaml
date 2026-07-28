@@ -3,6 +3,8 @@
 
 local_iface: ens160
 source_iface: ens192
+# 网络自检 ping 的 IPTV 上游网关（/diag）
+iptv_gateway: "10.170.160.1"
 input_url: "http://yepg.99tv.com.cn:99/pic/channel/list/channel_5.js"
 
 http:

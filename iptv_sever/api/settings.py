@@ -191,6 +191,7 @@ def flatten_runtime_config(raw: Optional[Dict[str, Any]] = None) -> Dict[str, An
     flat: Dict[str, Any] = {
         "local_iface": raw.get("local_iface"),
         "source_iface": raw.get("source_iface"),
+        "iptv_gateway": raw.get("iptv_gateway") or "10.170.160.1",
         "input_url": raw.get("input_url"),
         "output_m3u": out.get("m3u", "iptv.m3u"),
         "output_m3u_aptv": out.get("m3u_aptv", "iptv-aptv.m3u"),
