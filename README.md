@@ -1,8 +1,10 @@
-# IPTV Server
+# iptv_agent
 
 YAML 配置 + 直播 udpxy + 回看反代 + MQTT / Home Assistant Discovery。
 
 不再提供 Web 管理 UI。播放器只访问局域网 HTTP；状态与按钮走 MQTT。
+
+> 仓库名 `iptv_agent`。现网容器 / 241 目录仍为 `iptv`（`docker/iptv-v3/`），播放地址不用改。
 
 ## 快速开始
 
