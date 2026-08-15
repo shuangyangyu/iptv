@@ -26,6 +26,8 @@ udpxy:
   enabled: true
   port: 4022
   bind_address: "0.0.0.0"
+  backend_port: 14022
+  backend_bind: "127.0.0.1"
   max_connections: 5
   log_file: /var/log/udpxy.log
   pid_file: /tmp/udpxy.pid

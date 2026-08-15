@@ -22,6 +22,8 @@ docker compose up -d
 
 专网口 `source_iface` 走 DHCP 时地址会变。进程每 30 秒对照当前 IP 与 udpxy `/status` 的 Multicast address，不一致则自动重启（冷却 60 秒）。`/health` 仍可能为 ok，黑屏时看 `/diag` 的 `udpxy_bind_ip`。
 
+对外 `:4022` 是 HEAD 代理（APTV 探测用），真正的 udpxy 在 `127.0.0.1:14022`。播放列表地址不用改。
+
 播放列表：
 - TiviMate：`http://<lan-ip>:8088/out/iptv.m3u`（`{start}/{end}`）
 - APTV：`http://<lan-ip>:8088/out/iptv-aptv.m3u`（`${(b)}/${(e)}`）

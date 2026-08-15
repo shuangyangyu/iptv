@@ -46,6 +46,8 @@ def get_udpxy_config() -> Dict[str, Any]:
     udpxy.setdefault("enabled", True)
     udpxy.setdefault("port", 4022)
     udpxy.setdefault("bind_address", "0.0.0.0")
+    udpxy.setdefault("backend_port", 14022)
+    udpxy.setdefault("backend_bind", "127.0.0.1")
     udpxy.setdefault("source_iface", "eth1")
     udpxy.setdefault("max_connections", 5)
     udpxy.setdefault("buffer_size", "2Mb")

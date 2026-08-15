@@ -34,6 +34,40 @@ class UdpxyManager:
         self.process = None
         self.pid_file = Path(config.get("pid_file", "/tmp/udpxy.pid"))
         self.udpxy_binary = self._find_udpxy()
+
+    def public_port(self) -> int:
+        return int(self.config.get("port") or 4022)
+
+    def backend_port(self) -> int:
+        return int(self.config.get("backend_port") or 14022)
+
+    def backend_bind(self) -> str:
+        return str(self.config.get("backend_bind") or "127.0.0.1")
+
+    def _pid_from_file(self) -> Optional[int]:
+        try:
+            return int(self.pid_file.read_text())
+        except Exception:
+            return None
+
+    def _release_port(self, port: int) -> None:
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{int(port)}"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                return
+            for line in result.stdout.strip().splitlines():
+                try:
+                    os.kill(int(line), signal.SIGTERM)
+                except (ProcessLookupError, OSError, ValueError):
+                    pass
+            time.sleep(0.4)
+        except Exception:
+            pass
     
     def _find_udpxy(self) -> Optional[str]:
         """查找系统 UDPXY 程序路径"""
@@ -104,44 +138,33 @@ class UdpxyManager:
             logger.warning(f"检查网络接口时出错: {e}")
             # 继续执行，让 udpxy 自己处理接口错误
         
-        # 检查是否有其他 UDPXY 进程在运行（通过端口检查）
+        from backend.udpxy_head_proxy import start_head_proxy, stop_head_proxy
+
+        # 检查是否有其他 UDPXY 进程在运行（通过后端端口）
         if self.is_running():
-            return False, "UDPXY 已在运行", None
+            ok, msg = start_head_proxy(
+                self.config.get("bind_address") or "0.0.0.0",
+                self.public_port(),
+                self.backend_bind(),
+                self.backend_port(),
+            )
+            if not ok:
+                return False, f"UDPXY 已在运行，但 HEAD 代理失败: {msg}", None
+            return True, "UDPXY 已在运行", self._pid_from_file()
         
-        # 检查端口是否被占用（可能是其他进程）
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1)
-            result = sock.connect_ex((self.config["bind_address"], self.config["port"]))
-            sock.close()
-            if result == 0:
-                # 端口被占用，尝试停止占用端口的进程
-                try:
-                    # 查找占用端口的进程
-                    result = subprocess.run(
-                        ["lsof", "-ti", f":{self.config['port']}"],
-                        capture_output=True,
-                        text=True,
-                    )
-                    if result.returncode == 0 and result.stdout.strip():
-                        old_pid = int(result.stdout.strip())
-                        try:
-                            os.kill(old_pid, signal.SIGTERM)
-                            time.sleep(1)
-                        except (ProcessLookupError, OSError):
-                            pass
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        # 对外 4022 / 后端 14022 若被占，先清掉（旧进程或上次残留）
+        stop_head_proxy()
+        for port in (self.public_port(), self.backend_port()):
+            self._release_port(port)
         
         # 构建 udpxy 命令参数
+        # 对外仍是 :4022（HEAD 代理）；进程只绑 127.0.0.1:14022
         # -B: 组播接收缓冲；默认仅 2KB，IPTV 易卡顿，提高到 2MB
         buf = str(self.config.get("buffer_size") or "2Mb")
         cmd = [
             self.udpxy_binary,
-            "-p", str(self.config["port"]),
-            "-a", self.config["bind_address"],
+            "-p", str(self.backend_port()),
+            "-a", self.backend_bind(),
             "-m", self.config["source_iface"],
             "-c", str(self.config["max_connections"]),
             "-B", buf,
@@ -211,14 +234,14 @@ class UdpxyManager:
                         try:
                             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                             sock.settimeout(0.5)
-                            result = sock.connect_ex((addr, self.config["port"]))
+                            result = sock.connect_ex((addr, self.backend_port()))
                             sock.close()
                             if result == 0:
                                 port_listening = True
-                                logger.debug(f"端口 {self.config['port']} 在 {addr} 上被监听")
+                                logger.debug(f"端口 {self.backend_port()} 在 {addr} 上被监听")
                                 break
                         except Exception as e:
-                            logger.debug(f"连接 {addr}:{self.config['port']} 失败: {e}")
+                            logger.debug(f"连接 {addr}:{self.backend_port()} 失败: {e}")
                             continue
                     
                     if port_listening:
@@ -226,7 +249,7 @@ class UdpxyManager:
                         # 尝试从 lsof 获取 PID（如果可用）
                         try:
                             result = subprocess.run(
-                                ["lsof", "-ti", f":{self.config['port']}"],
+                                ["lsof", "-ti", f":{self.backend_port()}"],
                                 capture_output=True,
                                 text=True,
                                 timeout=2,
@@ -270,7 +293,7 @@ class UdpxyManager:
                 time.sleep(1.0)
                 try:
                     result = subprocess.run(
-                        ["lsof", "-ti", f":{self.config['port']}"],
+                        ["lsof", "-ti", f":{self.backend_port()}"],
                         capture_output=True,
                         text=True,
                         timeout=2,
@@ -297,7 +320,7 @@ class UdpxyManager:
                                     # 尝试最后一次获取 PID
                                     try:
                                         result = subprocess.run(
-                                            ["lsof", "-ti", f":{self.config['port']}"],
+                                            ["lsof", "-ti", f":{self.backend_port()}"],
                                             capture_output=True,
                                             text=True,
                                             timeout=2,
@@ -340,15 +363,31 @@ class UdpxyManager:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(1)
-                result = sock.connect_ex((self.config["bind_address"], self.config["port"]))
+                result = sock.connect_ex((self.backend_bind(), self.backend_port()))
                 sock.close()
                 if result != 0:
                     return False, "UDPXY 启动后端口未监听", None
             except Exception as e:
                 logger.warning(f"验证端口监听失败: {e}")
+
+            from backend.udpxy_head_proxy import start_head_proxy
+
+            pok, pmsg = start_head_proxy(
+                self.config.get("bind_address") or "0.0.0.0",
+                self.public_port(),
+                self.backend_bind(),
+                self.backend_port(),
+            )
+            if not pok:
+                return False, f"UDPXY 已启动但 HEAD 代理失败: {pmsg}", pid
             
-            logger.info(f"UDPXY 启动成功，PID: {pid}, 端口: {self.config['port']}")
-            return True, f"UDPXY 启动成功 (PID: {pid}, 端口: {self.config['port']})", pid
+            logger.info(
+                f"UDPXY 启动成功，PID: {pid}, 对外 :{self.public_port()} → {self.backend_bind()}:{self.backend_port()}"
+            )
+            return True, (
+                f"UDPXY 启动成功 (PID: {pid}, 对外 :{self.public_port()} "
+                f"→ :{self.backend_port()})"
+            ), pid
         except Exception as e:
             return False, f"启动失败: {str(e)}", None
     
@@ -359,6 +398,9 @@ class UdpxyManager:
         Returns:
             (是否成功, 消息)
         """
+        from backend.udpxy_head_proxy import stop_head_proxy
+
+        stop_head_proxy()
         if not self.is_running():
             return False, "UDPXY 未运行"
         
@@ -443,7 +485,7 @@ class UdpxyManager:
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.settimeout(0.3)
-                    result = sock.connect_ex((addr, self.config["port"]))
+                    result = sock.connect_ex((addr, self.backend_port()))
                     sock.close()
                     if result == 0:
                         port_listening = True
@@ -457,7 +499,7 @@ class UdpxyManager:
         if not port_listening:
             try:
                 result = subprocess.run(
-                    ["lsof", "-ti", f":{self.config['port']}"],
+                    ["lsof", "-ti", f":{self.backend_port()}"],
                     capture_output=True,
                     text=True,
                     timeout=2,
@@ -472,7 +514,7 @@ class UdpxyManager:
             # 尝试更新 PID 文件
             try:
                 result = subprocess.run(
-                    ["lsof", "-ti", f":{self.config['port']}"],
+                    ["lsof", "-ti", f":{self.backend_port()}"],
                     capture_output=True,
                     text=True,
                     timeout=2,
@@ -514,8 +556,9 @@ class UdpxyManager:
         status = {
             "running": running,
             "pid": None,
-            "port": self.config["port"],
-            "bind_address": self.config["bind_address"],
+            "port": self.public_port(),
+            "bind_address": self.config.get("bind_address") or "0.0.0.0",
+            "backend_port": self.backend_port(),
             "source_iface": self.config["source_iface"],
             "max_connections": self.config["max_connections"],
             "connections": 0,  # 初始化 connections 字段
@@ -533,14 +576,7 @@ class UdpxyManager:
             
             # 从 UDPXY 状态接口获取连接数和运行时间
             try:
-                port = self.config["port"]
-                bind_address = self.config["bind_address"]
-                
-                # 构建状态 URL，如果 bind_address 是 0.0.0.0，使用 127.0.0.1
-                if bind_address == "0.0.0.0":
-                    status_url = f"http://127.0.0.1:{port}/status"
-                else:
-                    status_url = f"http://{bind_address}:{port}/status"
+                status_url = f"http://{self.backend_bind()}:{self.backend_port()}/status"
                 
                 # 请求状态接口（设置较短的超时时间，避免阻塞）
                 req = urllib.request.Request(

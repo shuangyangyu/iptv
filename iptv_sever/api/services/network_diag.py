@@ -177,6 +177,23 @@ def _http_get(
         return False, str(e)[:160]
 
 
+def _http_head(url: str, *, timeout_s: float = 3.0) -> Tuple[bool, str]:
+    try:
+        req = urllib.request.Request(
+            url,
+            method="HEAD",
+            headers={"User-Agent": "iptv-diag/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            code = getattr(resp, "status", None) or resp.getcode()
+            ctype = resp.headers.get("Content-Type", "")
+            return 200 <= int(code) < 400, f"HTTP {code} {ctype}".strip()
+    except urllib.error.HTTPError as e:
+        return False, f"HTTP {e.code}"
+    except Exception as e:
+        return False, str(e)[:160]
+
+
 def _tcp_connect(host: str, port: int, *, timeout_s: float = 3.0) -> Tuple[bool, str]:
     try:
         with socket.create_connection((host, int(port)), timeout=timeout_s):
@@ -328,6 +345,11 @@ def run_network_diag(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
                     critical=False,
                 )
             )
+
+    # 11) APTV 探测用的 HEAD 必须由 4022 代理应答（udpxy 本身不认 HEAD）
+    pub_port = int((cfg.get("udpxy") or {}).get("port") or 4022)
+    ok, detail = _http_head(f"http://127.0.0.1:{pub_port}/rtp/239.33.5.2:22580")
+    checks.append(_check("udpxy_head", ok, detail))
 
     critical_fail = [c for c in checks if c["critical"] and not c["ok"]]
     warn_fail = [c for c in checks if (not c["critical"]) and not c["ok"]]
