@@ -30,11 +30,14 @@ def start_scheduler(
     *,
     status_poll: Optional[Callable[[], None]] = None,
     status_interval_seconds: int = 15,
+    udpxy_watch: Optional[Callable[[], None]] = None,
+    udpxy_watch_seconds: int = 30,
 ) -> None:
     """
     始终启动调度器：
     - 可选定时 m3u/epg
     - 可选定期 status_poll（推 MQTT，刷新 udpxy connections）
+    - 可选 udpxy_watch（专网 DHCP 换地址后重绑组播）
     """
     global _scheduler
     if BackgroundScheduler is None:
@@ -58,6 +61,18 @@ def start_scheduler(
                 coalesce=True,
             )
             logger.info(f"MQTT 状态刷新: every {secs}s")
+
+        if udpxy_watch is not None:
+            watch_secs = max(15, int(udpxy_watch_seconds or 30))
+            sched.add_job(
+                udpxy_watch,
+                IntervalTrigger(seconds=watch_secs),
+                id="iptv_udpxy_rebind",
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+            )
+            logger.info(f"UDPXY 地址看守: every {watch_secs}s")
 
         if mode in ("", "off", "disabled", "none"):
             logger.info("任务调度关闭 (scheduler.mode=off)")

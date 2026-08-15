@@ -280,6 +280,8 @@ udpxy -p 4022 -a 0.0.0.0 -m eth1 -c 5
 
 其中 `-m eth1` 来自 `source_iface`，`-a 0.0.0.0` 表示监听所有本地地址，播放器最终访问的地址由 `local_iface` 的 IP 和 UDPXY 端口组合得到。
 
+udpxy 只在启动时记下组播绑定 IP。专网 DHCP 换地址后，`ensure_udpxy_bound_to_source_ip()` 每 30 秒对照 `/status` 的 Multicast address 与 `source_iface` 当前 IPv4，不一致则重启（冷却 60 秒）。`/diag` 检查项 `udpxy_bind_ip` 用于核对。
+
 启动流程：
 
 1. 读取 UDPXY 配置。

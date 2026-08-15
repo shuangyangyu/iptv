@@ -290,12 +290,14 @@ def run_network_diag(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     else:
         checks.append(_check("catchup", False, "未配置 catchup.target_host"))
 
-    # 9) udpxy
+    # 9) udpxy 进程
+    bound = ""
     try:
         from .udpxy import get_udpxy_status
 
         st = get_udpxy_status()
         running = bool(st.get("running"))
+        bound = str(st.get("multicast_bind_ip") or "").strip()
         checks.append(
             _check(
                 "udpxy",
@@ -304,7 +306,28 @@ def run_network_diag(cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
             )
         )
     except Exception as e:
+        running = False
         checks.append(_check("udpxy", False, str(e)))
+
+    # 10) udpxy 组播绑定 IP 必须等于源网卡当前地址（DHCP 续租会变）
+    if running and sip:
+        if bound:
+            checks.append(
+                _check(
+                    "udpxy_bind_ip",
+                    bound == sip,
+                    f"udpxy={bound} iface={sip}",
+                )
+            )
+        else:
+            checks.append(
+                _check(
+                    "udpxy_bind_ip",
+                    False,
+                    "无法解析 udpxy 组播绑定地址",
+                    critical=False,
+                )
+            )
 
     critical_fail = [c for c in checks if c["critical"] and not c["ok"]]
     warn_fail = [c for c in checks if (not c["critical"]) and not c["ok"]]

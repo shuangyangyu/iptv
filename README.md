@@ -17,8 +17,10 @@ docker compose up -d
 
 | 端口 | 用途 |
 |------|------|
-| 8088 | `/out` m3u/epg、`/catchup` 回看、`/health` |
+| 8088 | `/out` m3u/epg、`/catchup` 回看、`/health`、`/diag` |
 | 4022 | udpxy 直播 |
+
+专网口 `source_iface` 走 DHCP 时地址会变。进程每 30 秒对照当前 IP 与 udpxy `/status` 的 Multicast address，不一致则自动重启（冷却 60 秒）。`/health` 仍可能为 ok，黑屏时看 `/diag` 的 `udpxy_bind_ip`。
 
 播放列表：
 - TiviMate：`http://<lan-ip>:8088/out/iptv.m3u`（`{start}/{end}`）

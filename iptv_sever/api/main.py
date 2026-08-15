@@ -153,16 +153,12 @@ def _run_scheduled_jobs() -> None:
 async def lifespan(app: FastAPI):
     cfg = get_runtime_config()
 
-    # udpxy
+    # udpxy：未运行则拉起；已运行但绑定旧专网 IP 则重绑
     try:
-        from .services.udpxy import get_udpxy_status, start_udpxy
+        from .services.udpxy import ensure_udpxy_bound_to_source_ip
 
-        st = get_udpxy_status()
-        if cfg.get("udpxy", {}).get("enabled", True) and not st.get("running"):
-            result = start_udpxy()
-            logger.info(f"启动时自动拉起 UDPXY: {result}")
-        else:
-            logger.info(f"UDPXY 状态: running={st.get('running')} pid={st.get('pid')}")
+        result = ensure_udpxy_bound_to_source_ip()
+        logger.info(f"启动时 UDPXY 绑定检查: {result}")
     except Exception as e:
         logger.error(f"启动 UDPXY 失败: {e}", exc_info=True)
 
@@ -182,12 +178,15 @@ async def lifespan(app: FastAPI):
     try:
         from .services.scheduler import start_scheduler
         from .services.state import publish_status_mqtt
+        from .services.udpxy import ensure_udpxy_bound_to_source_ip
 
         start_scheduler(
             cfg,
             _run_scheduled_jobs,
             status_poll=publish_status_mqtt,
             status_interval_seconds=15,
+            udpxy_watch=ensure_udpxy_bound_to_source_ip,
+            udpxy_watch_seconds=30,
         )
     except Exception as e:
         logger.error(f"启动调度器失败: {e}", exc_info=True)

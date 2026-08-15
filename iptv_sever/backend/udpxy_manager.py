@@ -521,6 +521,7 @@ class UdpxyManager:
             "connections": 0,  # 初始化 connections 字段
             "uptime": 0,
             "available": available,
+            "multicast_bind_ip": None,
         }
         
         if running:
@@ -592,6 +593,18 @@ class UdpxyManager:
                                     break
                                 except (ValueError, IndexError):
                                     continue
+
+                        # 组播绑定地址：DHCP 换 IP 后若仍是旧地址，拉流会 500
+                        bind_match = re.search(
+                            r"Multicast address</th>.*?<tr>\s*"
+                            r"<td[^>]*>.*?</td>\s*"
+                            r"<td[^>]*>.*?</td>\s*"
+                            r"<td[^>]*>\s*([0-9]{1,3}(?:\.[0-9]{1,3}){3})\s*</td>",
+                            content,
+                            re.IGNORECASE | re.DOTALL,
+                        )
+                        if bind_match:
+                            status["multicast_bind_ip"] = bind_match.group(1)
 
                         # 回退：统计 Active clients 明细表行数
                         if status["connections"] == 0:
